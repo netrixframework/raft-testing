@@ -138,3 +138,11 @@ func (t *netrixTransport) Stop() {
 		close(t.doneCh)
 	})
 }
+
+func PublishEventToNetrix(t string, params map[string]string) {
+	client, err := netrixclient.GetClient()
+	if err != nil {
+		return
+	}
+	client.PublishEventAsync(t, params)
+}

@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/gob"
 	"io"
 	"log"
@@ -123,23 +122,4 @@ func (h *httpKVAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Allow", http.MethodDelete)
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
-}
-
-func serveHttpKVAPI(ctx context.Context, port string, kv *kvApp, node *node) {
-	api := &httpKVAPI{
-		store: kv,
-		node:  node,
-	}
-	api.Start()
-	srv := http.Server{
-		Addr:    ":" + port,
-		Handler: api,
-	}
-	go func() {
-		if err := srv.ListenAndServe(); err != nil {
-			log.Fatal(err)
-		}
-	}()
-	<-ctx.Done()
-	api.Stop()
 }

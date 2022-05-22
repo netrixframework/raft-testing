@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -35,35 +36,6 @@ func ConfigFromJson(s []byte) *Config {
 	return c
 }
 
-func Run(ctx context.Context, config *Config) {
-
-	kvApp := newKVApp()
-
-	node, err := newNode(&nodeConfig{
-		ID:         config.ID,
-		Peers:      strings.Split(config.Peers, ","),
-		TickTime:   100 * time.Millisecond,
-		StorageDir: fmt.Sprintf("raftexample-%d", config.ID),
-		KVApp:      kvApp,
-		TransportConfig: &netrixclient.Config{
-			ReplicaID:        types.ReplicaID(strconv.Itoa(config.ID)),
-			NetrixAddr:       config.NetrixAddr,
-			ClientServerAddr: config.ClientAddr,
-			Info:             map[string]interface{}{},
-		},
-	})
-	if err != nil {
-		log.Fatalf("failed to create node: %s", err)
-	}
-
-	node.Start()
-	<-ctx.Done()
-	node.Stop()
-
-	// the key-value http handler will propose updates to raft
-	serveHttpKVAPI(ctx, config.APIPort, kvApp, node)
-}
-
 func openConfFile(path string) []byte {
 	s, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -73,18 +45,56 @@ func openConfFile(path string) []byte {
 }
 
 func main() {
+
 	termCh := make(chan os.Signal, 1)
-	signal.Notify(termCh)
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	go func() {
-		oscall := <-termCh
-		log.Printf("Received syscall: %#v", oscall)
-		cancel()
-	}()
+	signal.Notify(termCh, os.Interrupt)
 
 	flag.Parse()
 	config := ConfigFromJson(openConfFile(*configPath))
-	Run(ctx, config)
+	kvApp := newKVApp()
+	node, err := newNode(&nodeConfig{
+		ID:         config.ID,
+		Peers:      strings.Split(config.Peers, ","),
+		TickTime:   100 * time.Millisecond,
+		StorageDir: fmt.Sprintf("build/logs/raftexample-%d", config.ID),
+		KVApp:      kvApp,
+		LogPath:    fmt.Sprintf("build/logs/raftexample-%d/replica.log", config.ID),
+		TransportConfig: &netrixclient.Config{
+			ReplicaID:        types.ReplicaID(strconv.Itoa(config.ID)),
+			NetrixAddr:       config.NetrixAddr,
+			ClientServerAddr: config.ClientAddr,
+			Info: map[string]interface{}{
+				"http_api_addr": "127.0.0.1:" + config.APIPort,
+			},
+		},
+	})
+	if err != nil {
+		log.Fatalf("failed to create node: %s", err)
+	}
+	node.ResetStorage()
+	node.Start()
+	// the key-value http handler will propose updates to raft
+	api := newHTTPKVAPI(kvApp, node)
+	api.Start()
+	srv := http.Server{
+		Addr:    ":" + config.APIPort,
+		Handler: api,
+	}
+	go func() {
+		if err := srv.ListenAndServe(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	oscall := <-termCh
+	log.Printf("Received syscall: %#v", oscall)
+	node.Stop()
+	api.Stop()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer func() {
+		cancel()
+	}()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("Server Shutdown Failed:%+v", err)
+	}
 }

@@ -1,0 +1,3 @@
+raftexample1: ./build/raft -conf build/config/one.json
+raftexample2: ./build/raft -conf build/config/two.json
+raftexample3: ./build/raft -conf build/config/three.json

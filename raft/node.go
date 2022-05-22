@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strconv"
 	"time"
 
 	netrixclient "github.com/netrixframework/go-clientlibrary"
@@ -26,12 +27,14 @@ var (
 )
 
 type node struct {
-	rn         raft.Node
-	ID         types.ID
-	peers      []raft.Peer
-	storageDir string
-	ticker     *time.Ticker
+	rn     raft.Node
+	ID     types.ID
+	peers  []raft.Peer
+	config *nodeConfig
+	ticker *time.Ticker
 
+	timer       Timer
+	timerChan   chan bool
 	storage     *raft.MemoryStorage
 	snapshotter *snap.Snapshotter
 	wal         *wal.WAL
@@ -51,30 +54,55 @@ type nodeConfig struct {
 	TransportConfig *netrixclient.Config
 	KVApp           *kvApp
 	StorageDir      string
+	LogPath         string
+}
+
+func setupLogger(logPath string) *zap.Logger {
+	file, err := os.Create(logPath)
+	if err == nil {
+		file.Close()
+		config := zap.Config{
+			Level:            zap.NewAtomicLevelAt(zap.DebugLevel),
+			Development:      true,
+			Encoding:         "json",
+			EncoderConfig:    zap.NewDevelopmentEncoderConfig(),
+			OutputPaths:      []string{logPath},
+			ErrorOutputPaths: []string{logPath},
+		}
+		logger, err := config.Build()
+		if err == nil {
+			return logger
+		}
+		log.Printf("error creating log file: %s", err)
+	}
+	return zap.NewExample()
 }
 
 func newNode(config *nodeConfig) (*node, error) {
+	// log.Printf(
+	// 	"starting node with %d peers: %s",
+	// 	len(config.Peers),
+	// 	strings.Join(config.Peers, ","),
+	// )
 	raftPeers := make([]raft.Peer, len(config.Peers))
 	for i, p := range config.Peers {
-		if i+1 != config.ID {
-			raftPeers[types.ID(uint64(i+1))] = raft.Peer{
-				ID:      uint64(i + 1),
-				Context: []byte(p),
-			}
+		raftPeers[i] = raft.Peer{
+			ID:      uint64(i + 1),
+			Context: []byte(p),
 		}
 	}
 
 	n := &node{
-		rn:         nil,
-		ID:         types.ID(uint64(config.ID)),
-		peers:      raftPeers,
-		ticker:     time.NewTicker(config.TickTime),
-		storageDir: config.StorageDir,
-		kvApp:      config.KVApp,
-		state:      newNodeState(),
-		storage:    raft.NewMemoryStorage(),
-		logger:     zap.NewExample(),
-		doneChan:   make(chan struct{}),
+		rn:       nil,
+		ID:       types.ID(uint64(config.ID)),
+		peers:    raftPeers,
+		ticker:   time.NewTicker(config.TickTime),
+		config:   config,
+		kvApp:    config.KVApp,
+		state:    newNodeState(),
+		storage:  raft.NewMemoryStorage(),
+		logger:   setupLogger(config.LogPath),
+		doneChan: make(chan struct{}),
 	}
 
 	transport, err := newNetrixTransport(config.TransportConfig, n)
@@ -87,9 +115,19 @@ func newNode(config *nodeConfig) (*node, error) {
 		}
 	}
 	n.transport = transport
+	timer, err := NewNetrixTimer(10 * config.TickTime)
+	if err != nil {
+		return nil, err
+	}
+	n.timer = timer
+	n.timerChan = timer.Poll()
+
 	if err := n.transport.Start(); err != nil {
 		log.Fatalf("failed to start transport: %s", err)
 	}
+
+	timer.Start()
+
 	return n, nil
 }
 
@@ -130,9 +168,9 @@ func (n *node) saveSnapshot(snapshot raftpb.Snapshot) error {
 }
 
 func (n *node) setupSnapshotter() {
-	snapPath := path.Join(n.storageDir, "snapshots")
-	if !fileutil.Exist(n.storageDir) {
-		if err := os.Mkdir(n.storageDir, 0750); err != nil {
+	snapPath := path.Join(n.config.StorageDir, "snapshots")
+	if !fileutil.Exist(n.config.StorageDir) {
+		if err := os.Mkdir(n.config.StorageDir, 0750); err != nil {
 			log.Fatalf("failed to create storage dir: %s", err)
 		}
 		if err := os.Mkdir(snapPath, 0750); err != nil {
@@ -149,10 +187,10 @@ func (n *node) setupSnapshotter() {
 }
 
 func (n *node) setupWAL() bool {
-	walPath := path.Join(n.storageDir, "wal")
+	walPath := path.Join(n.config.StorageDir, "wal")
 	var snapshot *raftpb.Snapshot = nil
-	if !fileutil.Exist(n.storageDir) {
-		if err := os.Mkdir(n.storageDir, 0750); err != nil {
+	if !fileutil.Exist(n.config.StorageDir) {
+		if err := os.Mkdir(n.config.StorageDir, 0750); err != nil {
 			log.Fatalf("failed to create storage dir: %s", err)
 		}
 	}
@@ -165,19 +203,6 @@ func (n *node) setupWAL() bool {
 		if err != nil && err != snap.ErrNoSnapshot {
 			log.Fatalf("failed to pick newest snapshot: %s", err)
 		}
-		walSnap := walpb.Snapshot{}
-		if snapshot != nil {
-			walSnap.Index = snapshot.Metadata.Index
-			walSnap.Term = snapshot.Metadata.Term
-		}
-		w, err := wal.Open(n.logger, walPath, walSnap)
-		if err != nil {
-			log.Fatalf("failed to open wal: %s", err)
-		}
-		n.wal = w
-		if snapshot != nil {
-			n.restoreSnapshot()
-		}
 	} else {
 		if err := os.Mkdir(walPath, 0750); err != nil {
 			log.Fatalf("failed to create wal dir: %s", err)
@@ -186,15 +211,45 @@ func (n *node) setupWAL() bool {
 		if err != nil {
 			log.Fatalf("failed to create wal: %s", err)
 		}
-		n.wal = w
+		w.Close()
 	}
+	walSnap := walpb.Snapshot{}
+	if snapshot != nil {
+		walSnap.Index = snapshot.Metadata.Index
+		walSnap.Term = snapshot.Metadata.Term
+	}
+	w, err := wal.Open(n.logger, walPath, walSnap)
+	if err != nil {
+		log.Fatalf("failed to open wal: %s", err)
+	}
+	n.wal = w
 	_, hs, entries, err := n.wal.ReadAll()
 	if err != nil {
 		log.Fatalf("failed to read from wal: %s", err)
 	}
+	if snapshot != nil {
+		n.restoreSnapshot()
+	}
 	n.storage.SetHardState(hs)
 	n.storage.Append(entries)
 	return snapshot != nil
+}
+
+func (n *node) setupRaftLogger() raft.Logger {
+	var logger *raft.DefaultLogger
+	logFile, err := os.Create(n.config.LogPath)
+	if err == nil {
+		logger = &raft.DefaultLogger{
+			Logger: log.New(logFile, "raft", log.LstdFlags),
+		}
+		logger.Info("enabling debug logs")
+		logger.EnableDebug()
+	} else {
+		logger = &raft.DefaultLogger{
+			Logger: log.New(os.Stderr, "raft", log.LstdFlags),
+		}
+	}
+	return logger
 }
 
 func (n *node) Start() error {
@@ -212,21 +267,30 @@ func (n *node) Start() error {
 		MaxSizePerMsg:             1024 * 1024,
 		MaxInflightMsgs:           256,
 		MaxUncommittedEntriesSize: 1 << 30,
+		// Logger:                    n.setupRaftLogger(),
 	}
 
 	if restart {
 		n.rn = raft.RestartNode(config)
 	} else {
+		(&raft.DefaultLogger{
+			Logger: log.New(os.Stderr, "raft", log.LstdFlags),
+		}).Info("starting node")
 		n.rn = raft.StartNode(config, n.peers)
 	}
 	// Start node
 	n.state.SetRunning(true)
+	n.timer.Reset()
 	go n.raftloop()
 	return nil
 }
 
 func (n *node) Stop() error {
+	if !n.state.IsRunning() {
+		return nil
+	}
 	n.doneChan <- struct{}{}
+	n.rn.Stop()
 	n.state.SetRunning(false)
 	return nil
 }
@@ -239,7 +303,26 @@ func (n *node) raftloop() {
 		select {
 		case <-n.ticker.C:
 			n.rn.Tick()
+			nodeState := n.rn.Status()
+			n.timer.UpdateState(nodeState)
+			newState := n.state.UpdateRaftState(nodeState.RaftState)
+			if newState {
+				PublishEventToNetrix("StateChange", map[string]string{
+					"new_state": nodeState.RaftState.String(),
+					"term":      strconv.FormatUint(nodeState.Term, 10),
+				})
+			}
+			if n.state.UpdateTermState(nodeState.Term) {
+				PublishEventToNetrix("TermChange", map[string]string{
+					"term": strconv.FormatUint(nodeState.Term, 10),
+				})
+			}
 		case rd := <-n.rn.Ready():
+			if n.state.UpdateTermState(rd.Term) {
+				PublishEventToNetrix("TermChange", map[string]string{
+					"term": strconv.FormatUint(rd.Term, 10),
+				})
+			}
 			n.wal.Save(rd.HardState, rd.Entries)
 			if !raft.IsEmptySnap(rd.Snapshot) {
 				n.saveSnapshot(rd.Snapshot)
@@ -249,6 +332,8 @@ func (n *node) raftloop() {
 			n.applyEntries(rd.CommittedEntries)
 			n.takeSnapshot()
 			n.rn.Advance()
+		case <-n.timerChan:
+			n.rn.Campaign(context.TODO())
 		case <-n.doneChan:
 			return
 		}
@@ -291,6 +376,7 @@ func (n *node) sendMessages(msgs []raftpb.Message) {
 }
 
 func (n *node) applyEntries(entries []raftpb.Entry) {
+	n.storage.Append(entries)
 	if len(entries) == 0 {
 		return
 	}
@@ -303,6 +389,7 @@ func (n *node) applyEntries(entries []raftpb.Entry) {
 	entries = entries[commitIndex-entries[0].Index+1:]
 
 	for _, entry := range entries {
+		n.state.UpdateCommitIndex(entry.Index)
 		switch entry.Type {
 		case raftpb.EntryNormal:
 			if len(entry.Data) == 0 {
@@ -332,26 +419,30 @@ func (n *node) applyEntries(entries []raftpb.Entry) {
 
 func (n *node) Restart() error {
 	n.Stop()
-	if err := n.resetStorage(); err != nil {
+	if err := n.ResetStorage(); err != nil {
 		return fmt.Errorf("failed to reset storage: %s", err)
 	}
 	return n.Start()
 }
 
-func (n *node) resetStorage() error {
-	n.wal.Close()
-	return os.RemoveAll(n.storageDir)
+func (n *node) ResetStorage() error {
+	if n.wal != nil {
+		n.wal.Close()
+	}
+	n.storage = raft.NewMemoryStorage()
+	return os.RemoveAll(n.config.StorageDir)
 }
 
 func (n *node) Process(ctx context.Context, m raftpb.Message) error {
 	if !n.state.IsRunning() {
 		return nil
 	}
+	n.timer.Track(m)
 	return n.rn.Step(ctx, m)
 }
 
-func (n *node) Propose(data []byte) {
-	n.rn.Propose(context.TODO(), data)
+func (n *node) Propose(data []byte) error {
+	return n.rn.Propose(context.TODO(), data)
 }
 
 func (n *node) ProposeConfChange(cc raftpb.ConfChange) {
