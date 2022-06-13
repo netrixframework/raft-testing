@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"sync"
@@ -9,12 +8,14 @@ import (
 	"time"
 
 	"github.com/netrixframework/netrix/config"
+	"github.com/netrixframework/netrix/log"
 	"github.com/netrixframework/netrix/strategies"
 	"github.com/netrixframework/netrix/strategies/timeout"
 	"github.com/netrixframework/netrix/types"
 	"github.com/netrixframework/raft-testing/tests/util"
 	"github.com/spf13/cobra"
 	"go.etcd.io/etcd/raft/v3"
+	"go.etcd.io/etcd/raft/v3/raftpb"
 	"golang.org/x/exp/rand"
 	"gonum.org/v1/gonum/stat/distuv"
 )
@@ -44,7 +45,7 @@ type ExponentialDistribution struct {
 func NewExponentialDistribution() *ExponentialDistribution {
 	return &ExponentialDistribution{
 		dist: &distuv.Exponential{
-			Rate: 1.66,
+			Rate: 1,
 			Src:  rand.NewSource(uint64(time.Now().UnixMilli())),
 		},
 	}
@@ -55,50 +56,83 @@ func (e *ExponentialDistribution) Rand() int {
 }
 
 type records struct {
-	duration     map[int]time.Duration
+	duration     map[int][]time.Duration
 	curStartTime time.Time
 	lock         *sync.Mutex
+	timeSet      bool
 }
 
 func newRecords() *records {
 	return &records{
-		duration: make(map[int]time.Duration),
+		duration: make(map[int][]time.Duration),
 		lock:     new(sync.Mutex),
 	}
 }
 
-func (r *records) setupFunc(*strategies.Context) error {
+func (r *records) setupFunc(*strategies.Context) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 	r.curStartTime = time.Now()
-
-	return nil
+	r.timeSet = true
 }
 
 func (r *records) stepFunc(e *types.Event, ctx *strategies.Context) {
 	switch eType := e.Type.(type) {
+	case *types.MessageSendEventType:
+		message, ok := ctx.Messages.Get(eType.MessageID)
+		if ok {
+			rMsg, ok := message.ParsedMessage.(*util.RaftMsgWrapper)
+			if ok {
+				r.lock.Lock()
+				timeSet := r.timeSet
+				r.lock.Unlock()
+				if rMsg.Type == raftpb.MsgVote && !timeSet {
+					r.lock.Lock()
+					r.curStartTime = time.Now()
+					r.timeSet = true
+					r.lock.Unlock()
+				}
+			}
+		}
 	case *types.GenericEventType:
 		if eType.T == "StateChange" {
 			newState, ok := eType.Params["new_state"]
+			var dur time.Duration
 			if ok && newState == raft.StateLeader.String() {
 				r.lock.Lock()
-				r.duration[ctx.CurIteration()] = time.Since(r.curStartTime)
+				_, ok = r.duration[ctx.CurIteration()]
+				if !ok {
+					r.duration[ctx.CurIteration()] = make([]time.Duration, 0)
+				}
+				dur = time.Since(r.curStartTime)
+				r.duration[ctx.CurIteration()] = append(r.duration[ctx.CurIteration()], dur)
+				r.timeSet = false
 				r.lock.Unlock()
 			}
 		}
 	}
 }
 
-func (r *records) finalize() {
+func (r *records) finalize(ctx *strategies.Context) {
 	sum := 0
+	count := 0
 	r.lock.Lock()
 	for _, dur := range r.duration {
-		sum = sum + int(dur)
+		for _, d := range dur {
+			sum = sum + int(d)
+			count = count + 1
+		}
 	}
-	count := len(r.duration)
+	iterations := len(r.duration)
 	r.lock.Unlock()
-	avg := time.Duration(sum / count)
-	fmt.Printf("\nAverage time of run: %s\n", avg.String())
+	if count != 0 {
+		avg := time.Duration(sum / count)
+		ctx.Logger.With(log.LogParams{
+			"completed_runs":    iterations,
+			"average_time":      avg.String(),
+			"elections_per_run": count / iterations,
+		}).Info("Metrics")
+	}
 }
 
 var strategyCmd = &cobra.Command{
@@ -110,9 +144,13 @@ var strategyCmd = &cobra.Command{
 		r := newRecords()
 
 		strategy, err := timeout.NewTimeoutStrategy(&timeout.TimeoutStrategyConfig{
-			Nondeterministic: true,
-			ClockDrift:       5,
-			MaxMessageDelay:  100 * time.Millisecond,
+			Nondeterministic:  true,
+			SpuriousCheck:     true,
+			ClockDrift:        5,
+			MaxMessageDelay:   100 * time.Millisecond,
+			DelayDistribution: NewExponentialDistribution(),
+			MessageBias:       0.8,
+			RecordFilePath:    "/Users/srinidhin/Local/data/testing/raft/7",
 		})
 		if err != nil {
 			return err
@@ -120,26 +158,26 @@ var strategyCmd = &cobra.Command{
 
 		driver := strategies.NewStrategyDriver(
 			&config.Config{
-				APIServerAddr: "10.0.0.8:7074",
+				APIServerAddr: "172.23.37.208:7074",
 				NumReplicas:   3,
 				LogConfig: config.LogConfig{
 					Format: "json",
-					Path:   "/tmp/raft/log/checker.log",
-				},
-				StrategyConfig: config.StrategyConfig{
-					Iterations:       30,
-					IterationTimeout: 10 * time.Second,
+					Path:   "/Users/srinidhin/Local/data/testing/raft/7/checker.log",
 				},
 			},
 			&util.RaftMsgParser{},
 			strategy,
-			r.setupFunc,
-			r.stepFunc,
+			&strategies.StrategyConfig{
+				Iterations:       100,
+				IterationTimeout: 10 * time.Second,
+				SetupFunc:        r.setupFunc,
+				StepFunc:         r.stepFunc,
+				FinalizeFunc:     r.finalize,
+			},
 		)
 
 		go func() {
 			<-termCh
-			r.finalize()
 			driver.Stop()
 		}()
 		return driver.Start()

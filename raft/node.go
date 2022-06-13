@@ -316,6 +316,12 @@ func (n *node) raftloop() {
 				PublishEventToNetrix("TermChange", map[string]string{
 					"term": strconv.FormatUint(nodeState.Term, 10),
 				})
+				if nodeState.RaftState == raft.StateFollower && nodeState.Term > 1 {
+					(&raft.DefaultLogger{
+						Logger: log.New(os.Stderr, "raft", log.LstdFlags),
+					}).Infof("%d starting campaign", uint64(n.ID))
+					n.rn.Campaign(context.TODO())
+				}
 			}
 		case rd := <-n.rn.Ready():
 			if n.state.UpdateTermState(rd.Term) {

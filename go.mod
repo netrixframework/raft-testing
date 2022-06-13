@@ -2,13 +2,11 @@ module github.com/netrixframework/raft-testing
 
 go 1.17
 
-replace github.com/netrixframework/netrix => /Users/srinidhin/Local/go/src/github.com/netrixframework/netrix
-
 require go.etcd.io/etcd/raft/v3 v3.5.1
 
 require (
 	github.com/netrixframework/go-clientlibrary v0.1.2
-	github.com/netrixframework/netrix v0.1.3
+	github.com/netrixframework/netrix v0.1.4
 	github.com/spf13/cobra v1.4.0
 	go.etcd.io/etcd/client/pkg/v3 v3.5.2
 	go.etcd.io/etcd/server/v3 v3.5.1
