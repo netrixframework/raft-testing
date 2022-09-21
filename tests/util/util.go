@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/netrixframework/netrix/log"
+	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/testlib"
 	"github.com/netrixframework/netrix/types"
 	"go.etcd.io/etcd/raft/v3/raftpb"
@@ -56,7 +57,7 @@ func SetKeyValue(replica *types.Replica, key, value string) error {
 	return nil
 }
 
-func GetMessageFromEvent(e *types.Event, c *testlib.Context) (*RaftMsgWrapper, bool) {
+func GetMessageFromEvent(e *types.Event, c *sm.Context) (*RaftMsgWrapper, bool) {
 	m, ok := c.GetMessage(e)
 	if !ok {
 		return nil, false
@@ -65,19 +66,19 @@ func GetMessageFromEvent(e *types.Event, c *testlib.Context) (*RaftMsgWrapper, b
 	return raftMessage, ok
 }
 
-func FReplicas() func(*types.Event, *testlib.Context) (int, bool) {
-	return func(_ *types.Event, c *testlib.Context) (int, bool) {
-		return int((c.Replicas.Cap() - 1) / 2), true
+func FReplicas() func(*types.Event, *sm.Context) (int, bool) {
+	return func(_ *types.Event, c *sm.Context) (int, bool) {
+		return int((c.ReplicaStore.Cap() - 1) / 2), true
 	}
 }
 
 func PickRandomReplica() func(*testlib.Context) error {
 	return func(ctx *testlib.Context) error {
-		r, ok := ctx.Replicas.GetRandom()
+		r, ok := ctx.ReplicaStore.GetRandom()
 		if !ok {
 			return errors.New("no replicas to pick random replica")
 		}
-		ctx.Logger().With(log.LogParams{
+		ctx.Logger.With(log.LogParams{
 			"random_replica": r.ID,
 		}).Info("Picked random replica")
 		ctx.Vars.Set("_random_replica", string(r.ID))
@@ -85,15 +86,15 @@ func PickRandomReplica() func(*testlib.Context) error {
 	}
 }
 
-func RandomReplica() func(*types.Event, *testlib.Context) (types.ReplicaID, bool) {
-	return func(e *types.Event, ctx *testlib.Context) (types.ReplicaID, bool) {
+func RandomReplica() func(*types.Event, *sm.Context) (types.ReplicaID, bool) {
+	return func(e *types.Event, ctx *sm.Context) (types.ReplicaID, bool) {
 		rID, ok := ctx.Vars.GetString("_random_replica")
 		if !ok {
-			r, ok := ctx.Replicas.GetRandom()
+			r, ok := ctx.ReplicaStore.GetRandom()
 			if !ok {
 				return "", false
 			}
-			ctx.Logger().With(log.LogParams{
+			ctx.Logger.With(log.LogParams{
 				"random_replica": r.ID,
 			}).Info("Picked random replica")
 			ctx.Vars.Set("_random_replica", string(r.ID))

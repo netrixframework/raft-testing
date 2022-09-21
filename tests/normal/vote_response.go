@@ -3,29 +3,30 @@ package normal
 import (
 	"time"
 
+	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/testlib"
 	"github.com/netrixframework/raft-testing/tests/util"
 	"go.etcd.io/etcd/raft/v3/raftpb"
 )
 
 func VoteResponse() *testlib.TestCase {
-	sm := testlib.NewStateMachine()
-	init := sm.Builder()
+	stateMachine := sm.NewStateMachine()
+	init := stateMachine.Builder()
 	voteSent := init.On(
-		testlib.IsMessageSend().
+		sm.IsMessageSend().
 			And(util.IsMessageType(raftpb.MsgVote)),
 		"VoteSent",
 	)
 	voteSent.On(
-		testlib.IsMessageSend().
+		sm.IsMessageSend().
 			And(util.IsMessageType(raftpb.MsgVoteResp)).
 			And(util.IsSenderSameAs("r")),
-		testlib.SuccessStateLabel,
+		sm.SuccessStateLabel,
 	)
 
 	filters := testlib.NewFilterSet()
 	filters.AddFilter(
-		testlib.If(testlib.IsMessageSend().
+		testlib.If(sm.IsMessageSend().
 			And(util.IsMessageType(raftpb.MsgVote)),
 		).Then(
 			testlib.OnceAction(util.RecordMessageReceiver("r")),
@@ -36,7 +37,7 @@ func VoteResponse() *testlib.TestCase {
 	testcase := testlib.NewTestCase(
 		"VoteResponse",
 		1*time.Minute,
-		sm,
+		stateMachine,
 		filters,
 	)
 	return testcase

@@ -3,6 +3,7 @@ package voting
 import (
 	"time"
 
+	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/testlib"
 	"github.com/netrixframework/raft-testing/tests/util"
 	"go.etcd.io/etcd/raft/v3/raftpb"
@@ -12,17 +13,17 @@ import (
 // to a particular replica and expect it to transition to candidate state
 
 func DropHeartbeat() *testlib.TestCase {
-	sm := testlib.NewStateMachine()
-	init := sm.Builder()
+	stateMachine := sm.NewStateMachine()
+	init := stateMachine.Builder()
 	init.On(
 		util.IsStateChange().
 			And(util.IsStateLeader()),
 		"LeaderElected",
 	).On(
-		testlib.IsEventOfF(util.RandomReplica()).
+		sm.IsEventOfF(util.RandomReplica()).
 			And(util.IsStateChange()).
 			And(util.IsStateCandidate()),
-		testlib.SuccessStateLabel,
+		sm.SuccessStateLabel,
 	)
 
 	filters := testlib.NewFilterSet()
@@ -31,8 +32,8 @@ func DropHeartbeat() *testlib.TestCase {
 	// Hence we drop all MsgVoteResp messages to it
 	filters.AddFilter(
 		testlib.If(
-			testlib.IsMessageSend().
-				And(testlib.IsMessageToF(util.RandomReplica())).
+			sm.IsMessageSend().
+				And(sm.IsMessageToF(util.RandomReplica())).
 				And(util.IsMessageType(raftpb.MsgVoteResp)),
 		).Then(
 			testlib.DropMessage(),
@@ -43,9 +44,9 @@ func DropHeartbeat() *testlib.TestCase {
 	// after a leader has been elected
 	filters.AddFilter(
 		testlib.If(
-			sm.InState("LeaderElected").
-				And(testlib.IsMessageSend()).
-				And(testlib.IsMessageToF(util.RandomReplica())).
+			stateMachine.InState("LeaderElected").
+				And(sm.IsMessageSend()).
+				And(sm.IsMessageToF(util.RandomReplica())).
 				And(util.IsMessageType(raftpb.MsgHeartbeat).
 					Or(util.IsMessageType(raftpb.MsgApp)).
 					Or(util.IsMessageType(raftpb.MsgSnap))),
@@ -57,7 +58,7 @@ func DropHeartbeat() *testlib.TestCase {
 	testcase := testlib.NewTestCase(
 		"DropHeartbeat",
 		1*time.Minute,
-		sm,
+		stateMachine,
 		filters,
 	)
 	testcase.SetupFunc(util.PickRandomReplica())

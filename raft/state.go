@@ -3,8 +3,8 @@ package main
 import (
 	"sync"
 
-	"go.etcd.io/etcd/raft/v3"
-	"go.etcd.io/etcd/raft/v3/raftpb"
+	raft "github.com/netrixframework/raft-testing/raft/protocol"
+	raftpb "go.etcd.io/etcd/raft/v3/raftpb"
 )
 
 type nodeState struct {

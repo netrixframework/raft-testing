@@ -3,6 +3,7 @@ package voting
 import (
 	"time"
 
+	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/testlib"
 	"github.com/netrixframework/raft-testing/tests/util"
 	"go.etcd.io/etcd/raft/v3/raftpb"
@@ -11,24 +12,24 @@ import (
 // Drop all votes and expect a new term
 
 func DropVotesNewTerm() *testlib.TestCase {
-	sm := testlib.NewStateMachine()
-	init := sm.Builder()
+	stateMachine := sm.NewStateMachine()
+	init := stateMachine.Builder()
 	votingPhase := init.On(
-		testlib.IsMessageSend().
+		sm.IsMessageSend().
 			And(util.IsMessageType(raftpb.MsgVote)),
 		"VotingPhase",
 	)
 	votingPhase.On(
 		util.IsNewTerm(),
-		testlib.SuccessStateLabel,
+		sm.SuccessStateLabel,
 	)
 
 	filters := testlib.NewFilterSet()
 	filters.AddFilter(util.CountTerm())
 	filters.AddFilter(
 		testlib.If(
-			sm.InState("VotingPhase").
-				And(testlib.IsMessageSend()).
+			stateMachine.InState("VotingPhase").
+				And(sm.IsMessageSend()).
 				And(util.IsMessageType(raftpb.MsgVoteResp)),
 		).Then(
 			testlib.DropMessage(),
@@ -38,7 +39,7 @@ func DropVotesNewTerm() *testlib.TestCase {
 	testcase := testlib.NewTestCase(
 		"DropVotesNewTerm",
 		1*time.Minute,
-		sm,
+		stateMachine,
 		filters,
 	)
 	return testcase

@@ -3,18 +3,19 @@ package normal
 import (
 	"time"
 
+	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/testlib"
 	"github.com/netrixframework/raft-testing/tests/util"
 )
 
 func ExpectLeader() *testlib.TestCase {
-	sm := testlib.NewStateMachine()
-	init := sm.Builder()
+	stateMachine := sm.NewStateMachine()
+	init := stateMachine.Builder()
 	init.On(
 		util.IsStateChange().
 			And(util.IsStateLeader()).
 			And(util.IsCorrectLeader()),
-		testlib.SuccessStateLabel,
+		sm.SuccessStateLabel,
 	)
 
 	filters := testlib.NewFilterSet()
@@ -23,7 +24,7 @@ func ExpectLeader() *testlib.TestCase {
 	testcase := testlib.NewTestCase(
 		"ExpectLeader",
 		1*time.Minute,
-		sm,
+		stateMachine,
 		filters,
 	)
 	return testcase

@@ -3,6 +3,7 @@ package voting
 import (
 	"time"
 
+	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/testlib"
 	"github.com/netrixframework/raft-testing/tests/util"
 )
@@ -12,28 +13,28 @@ import (
 // 3. Heal partition and expect a remaining replica to reach term 10
 
 func Partition() *testlib.TestCase {
-	sm := testlib.NewStateMachine()
-	init := sm.Builder()
+	stateMachine := sm.NewStateMachine()
+	init := stateMachine.Builder()
 	init.On(
-		testlib.IsEventOfF(util.RandomReplica()).
+		sm.IsEventOfF(util.RandomReplica()).
 			And(util.IsNewTerm()).
 			And(util.IsTerm(10)),
 		"ReachedTermTen",
 	).On(
-		(testlib.IsEventOfF(util.RandomReplica()).Not()).
-			And(testlib.IsEventType("TermChange")).
+		(sm.IsEventOfF(util.RandomReplica()).Not()).
+			And(sm.IsEventType("TermChange")).
 			And(util.IsTermGte(10)),
-		testlib.SuccessStateLabel,
+		sm.SuccessStateLabel,
 	)
 
 	filters := testlib.NewFilterSet()
 	filters.AddFilter(util.CountTerm())
 	filters.AddFilter(
 		testlib.If(
-			sm.InState(testlib.StartStateLabel).
+			stateMachine.InState(sm.StartStateLabel).
 				And(
-					testlib.IsMessageFromF(util.RandomReplica()).
-						Or(testlib.IsMessageToF(util.RandomReplica())),
+					sm.IsMessageFromF(util.RandomReplica()).
+						Or(sm.IsMessageToF(util.RandomReplica())),
 				),
 		).Then(
 			testlib.DropMessage(),
@@ -43,7 +44,7 @@ func Partition() *testlib.TestCase {
 	testcase := testlib.NewTestCase(
 		"Partition",
 		1*time.Minute,
-		sm,
+		stateMachine,
 		filters,
 	)
 	testcase.SetupFunc(util.PickRandomReplica())

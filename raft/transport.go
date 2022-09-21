@@ -10,9 +10,7 @@ import (
 
 	netrixclient "github.com/netrixframework/go-clientlibrary"
 	ntypes "github.com/netrixframework/netrix/types"
-	etypes "go.etcd.io/etcd/client/pkg/v3/types"
-	"go.etcd.io/etcd/raft/v3/raftpb"
-	"go.etcd.io/etcd/server/v3/etcdserver/api/snap"
+	raftpb "go.etcd.io/etcd/raft/v3/raftpb"
 )
 
 type netrixTransport struct {
@@ -100,19 +98,15 @@ func (t *netrixTransport) sendMessage(msg raftpb.Message) {
 	)
 }
 
-func (t *netrixTransport) SendSnapshot(m snap.Message) {
+func (t *netrixTransport) AddRemote(id uint64, urls []string) {
 
 }
 
-func (t *netrixTransport) AddRemote(id etypes.ID, urls []string) {
+func (t *netrixTransport) AddPeer(id uint64, urls []string) {
 
 }
 
-func (t *netrixTransport) AddPeer(id etypes.ID, urls []string) {
-
-}
-
-func (t *netrixTransport) RemovePeer(id etypes.ID) {
+func (t *netrixTransport) RemovePeer(id uint64) {
 
 }
 
@@ -120,11 +114,11 @@ func (t *netrixTransport) RemoveAllPeers() {
 
 }
 
-func (t *netrixTransport) UpdatePeer(id etypes.ID, urls []string) {
+func (t *netrixTransport) UpdatePeer(id uint64, urls []string) {
 
 }
 
-func (t *netrixTransport) ActiveSince(id etypes.ID) time.Time {
+func (t *netrixTransport) ActiveSince(id uint64) time.Time {
 	return time.Now()
 }
 

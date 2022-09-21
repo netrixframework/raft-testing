@@ -7,7 +7,7 @@ func RootCmd() *cobra.Command {
 		Use: "raft-testing",
 	}
 	cmd.CompletionOptions.DisableDefaultCmd = true
-	cmd.AddCommand(strategyCmd)
+	cmd.AddCommand(StrategyCommand())
 	cmd.AddCommand(unittestCmd)
 	return cmd
 }

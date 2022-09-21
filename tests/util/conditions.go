@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/netrixframework/netrix/testlib"
+	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/types"
 	"go.etcd.io/etcd/raft/v3"
 	"go.etcd.io/etcd/raft/v3/raftpb"
 )
 
-func IsMessageType(t raftpb.MessageType) testlib.Condition {
-	return func(e *types.Event, c *testlib.Context) bool {
+func IsMessageType(t raftpb.MessageType) sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
 		msg, ok := GetMessageFromEvent(e, c)
 		if !ok {
 			return false
@@ -20,8 +20,8 @@ func IsMessageType(t raftpb.MessageType) testlib.Condition {
 	}
 }
 
-func IsAcceptingVote() testlib.Condition {
-	return func(e *types.Event, c *testlib.Context) bool {
+func IsAcceptingVote() sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
 		msg, ok := GetMessageFromEvent(e, c)
 		if !ok {
 			return false
@@ -30,8 +30,8 @@ func IsAcceptingVote() testlib.Condition {
 	}
 }
 
-func IsSenderSameAs(label string) testlib.Condition {
-	return func(e *types.Event, c *testlib.Context) bool {
+func IsSenderSameAs(label string) sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
 		sender, ok := c.Vars.GetString(label)
 		if !ok {
 			return false
@@ -44,8 +44,8 @@ func IsSenderSameAs(label string) testlib.Condition {
 	}
 }
 
-func IsReceiverSameAs(label string) testlib.Condition {
-	return func(e *types.Event, c *testlib.Context) bool {
+func IsReceiverSameAs(label string) sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
 		sender, ok := c.Vars.GetString(label)
 		if !ok {
 			return false
@@ -58,12 +58,12 @@ func IsReceiverSameAs(label string) testlib.Condition {
 	}
 }
 
-func IsStateChange() testlib.Condition {
-	return testlib.IsEventType("TermChange")
+func IsStateChange() sm.Condition {
+	return sm.IsEventType("TermChange")
 }
 
-func IsStateLeader() testlib.Condition {
-	return func(e *types.Event, c *testlib.Context) bool {
+func IsStateLeader() sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
 		switch eType := e.Type.(type) {
 		case *types.GenericEventType:
 			if eType.T != "StateChange" {
@@ -80,8 +80,8 @@ func IsStateLeader() testlib.Condition {
 	}
 }
 
-func IsStateCandidate() testlib.Condition {
-	return func(e *types.Event, c *testlib.Context) bool {
+func IsStateCandidate() sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
 		switch eType := e.Type.(type) {
 		case *types.GenericEventType:
 			if eType.T != "StateChange" {
@@ -98,8 +98,8 @@ func IsStateCandidate() testlib.Condition {
 	}
 }
 
-func IsCorrectLeader() testlib.Condition {
-	return func(e *types.Event, c *testlib.Context) bool {
+func IsCorrectLeader() sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
 		switch eType := e.Type.(type) {
 		case *types.GenericEventType:
 			if eType.T != "StateChange" {
@@ -115,7 +115,7 @@ func IsCorrectLeader() testlib.Condition {
 					return false
 				}
 				votesKey := fmt.Sprintf("_votes_%s_%s", term, e.Replica)
-				f := int((c.Replicas.Cap() - 1) / 2)
+				f := int((c.ReplicaStore.Cap() - 1) / 2)
 				voteCount, ok := c.Vars.GetCounter(votesKey)
 				if !ok {
 					return false
@@ -129,12 +129,12 @@ func IsCorrectLeader() testlib.Condition {
 	}
 }
 
-func IsTermChange() testlib.Condition {
-	return testlib.IsEventType("TermChange")
+func IsTermChange() sm.Condition {
+	return sm.IsEventType("TermChange")
 }
 
-func IsNewTerm() testlib.Condition {
-	return func(e *types.Event, c *testlib.Context) bool {
+func IsNewTerm() sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
 		switch eType := e.Type.(type) {
 		case *types.GenericEventType:
 			if eType.T != "TermChange" {
@@ -161,8 +161,8 @@ func IsNewTerm() testlib.Condition {
 	}
 }
 
-func IsTerm(term int) testlib.Condition {
-	return func(e *types.Event, c *testlib.Context) bool {
+func IsTerm(term int) sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
 		switch eType := e.Type.(type) {
 		case *types.GenericEventType:
 			if eType.T != "TermChange" {
@@ -184,8 +184,8 @@ func IsTerm(term int) testlib.Condition {
 	}
 }
 
-func IsTermGte(g int) testlib.Condition {
-	return func(e *types.Event, c *testlib.Context) bool {
+func IsTermGte(g int) sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
 		switch eType := e.Type.(type) {
 		case *types.GenericEventType:
 			if eType.T != "TermChange" {

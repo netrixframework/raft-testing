@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"sync"
 
-	"go.etcd.io/etcd/raft/v3/raftpb"
+	raftpb "go.etcd.io/etcd/raft/v3/raftpb"
 )
 
 type httpKVAPI struct {
@@ -46,6 +46,9 @@ func (a *httpKVAPI) Stop() {
 
 func (a *httpKVAPI) poll() {
 	for {
+		if !a.node.Ready() {
+			continue
+		}
 		select {
 		case prop := <-a.proposeC:
 			a.node.Propose(prop)

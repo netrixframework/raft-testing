@@ -56,9 +56,9 @@ func main() {
 		ID:         config.ID,
 		Peers:      strings.Split(config.Peers, ","),
 		TickTime:   50 * time.Millisecond,
-		StorageDir: fmt.Sprintf("build/logs/raftexample-%d", config.ID),
+		StorageDir: fmt.Sprintf("build/storage/raftexample-%d", config.ID),
 		KVApp:      kvApp,
-		LogPath:    fmt.Sprintf("build/logs/raftexample-%d/replica.log", config.ID),
+		LogPath:    fmt.Sprintf("build/logs/raftexample-%d", config.ID),
 		TransportConfig: &netrixclient.Config{
 			ReplicaID:        types.ReplicaID(strconv.Itoa(config.ID)),
 			NetrixAddr:       config.NetrixAddr,
@@ -72,12 +72,12 @@ func main() {
 		log.Fatalf("failed to create node: %s", err)
 	}
 	node.ResetStorage()
-	node.Start()
+
 	// the key-value http handler will propose updates to raft
 	api := newHTTPKVAPI(kvApp, node)
 	api.Start()
 	srv := http.Server{
-		Addr:    ":" + config.APIPort,
+		Addr:    "127.0.0.1:" + config.APIPort,
 		Handler: api,
 	}
 	go func() {
@@ -85,6 +85,8 @@ func main() {
 			log.Fatal(err)
 		}
 	}()
+
+	node.Start()
 
 	oscall := <-termCh
 	log.Printf("Received syscall: %#v", oscall)

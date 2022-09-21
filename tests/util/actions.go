@@ -13,7 +13,7 @@ import (
 
 func SetKeyValueAction(key, value string) testlib.Action {
 	return func(e *types.Event, ctx *testlib.Context) (msgs []*types.Message) {
-		replica, ok := ctx.Replicas.GetRandom()
+		replica, ok := ctx.ReplicaStore.GetRandom()
 		if !ok {
 			return
 		}
@@ -39,7 +39,7 @@ func RecordMessageReceiver(label string) testlib.Action {
 		if !ok {
 			return
 		}
-		ctx.Logger().With(log.LogParams{
+		ctx.Logger.With(log.LogParams{
 			"to": string(msg.To),
 		}).Debug("recording receiver")
 		ctx.Vars.Set(label, string(msg.To))
@@ -49,7 +49,7 @@ func RecordMessageReceiver(label string) testlib.Action {
 
 func CountVotes() testlib.FilterFunc {
 	return func(e *types.Event, ctx *testlib.Context) (msgs []*types.Message, ok bool) {
-		msg, ok := GetMessageFromEvent(e, ctx)
+		msg, ok := GetMessageFromEvent(e, ctx.Context)
 		if !ok {
 			return msgs, false
 		}
@@ -68,7 +68,7 @@ func CountVotes() testlib.FilterFunc {
 
 func CountTerm() testlib.FilterFunc {
 	return func(e *types.Event, ctx *testlib.Context) (msgs []*types.Message, ok bool) {
-		msg, ok := GetMessageFromEvent(e, ctx)
+		msg, ok := GetMessageFromEvent(e, ctx.Context)
 		if !ok {
 			return msgs, false
 		}

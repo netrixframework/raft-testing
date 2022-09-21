@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/testlib"
 	"github.com/netrixframework/netrix/types"
 	"github.com/netrixframework/raft-testing/tests/util"
@@ -12,7 +13,7 @@ import (
 
 // Test if the leader is elected despite dropping $f$ vote response messages
 
-func votesByTermByReplica(e *types.Event, c *testlib.Context) (string, bool) {
+func votesByTermByReplica(e *types.Event, c *sm.Context) (string, bool) {
 	m, ok := util.GetMessageFromEvent(e, c)
 	if !ok {
 		return "", false
@@ -21,30 +22,30 @@ func votesByTermByReplica(e *types.Event, c *testlib.Context) (string, bool) {
 }
 
 func DropVotes() *testlib.TestCase {
-	sm := testlib.NewStateMachine()
-	init := sm.Builder()
+	stateMachine := sm.NewStateMachine()
+	init := stateMachine.Builder()
 	init.On(
 		util.IsStateChange().
 			And(util.IsStateLeader()),
-		testlib.SuccessStateLabel,
+		sm.SuccessStateLabel,
 	)
 
 	filters := testlib.NewFilterSet()
 	filters.AddFilter(
 		testlib.If(
-			testlib.IsMessageSend().
+			sm.IsMessageSend().
 				And(util.IsMessageType(raftpb.MsgVoteResp)).
-				And(testlib.CountF(votesByTermByReplica).LtF(util.FReplicas())),
+				And(sm.CountF(votesByTermByReplica).LtF(util.FReplicas())),
 		).Then(
 			testlib.DropMessage(),
-			testlib.CountF(votesByTermByReplica).Incr(),
+			testlib.IncrCounter(sm.CountF(votesByTermByReplica)),
 		),
 	)
 
 	testcase := testlib.NewTestCase(
 		"DropFVotes",
 		1*time.Minute,
-		sm,
+		stateMachine,
 		filters,
 	)
 	return testcase

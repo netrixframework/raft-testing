@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/netrixframework/netrix/log"
+	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/testlib"
 	"github.com/netrixframework/netrix/types"
 	"github.com/netrixframework/raft-testing/tests/util"
@@ -12,7 +13,7 @@ import (
 
 func RecordIndex(label string) testlib.Action {
 	return func(e *types.Event, ctx *testlib.Context) (msgs []*types.Message) {
-		msg, ok := util.GetMessageFromEvent(e, ctx)
+		msg, ok := util.GetMessageFromEvent(e, ctx.Context)
 		if !ok {
 			return
 		}
@@ -21,14 +22,14 @@ func RecordIndex(label string) testlib.Action {
 	}
 }
 
-func IsSameIndex(label string) testlib.Condition {
-	return func(e *types.Event, c *testlib.Context) bool {
+func IsSameIndex(label string) sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
 		msg, ok := util.GetMessageFromEvent(e, c)
 		if !ok {
 			return false
 		}
 		index, ok := c.Vars.GetInt(label)
-		c.Logger().With(log.LogParams{
+		c.Logger.With(log.LogParams{
 			"ok":       ok,
 			"curIndex": index,
 			"msgIndex": msg.Index,
@@ -40,24 +41,24 @@ func IsSameIndex(label string) testlib.Condition {
 // Drop append message and expect another one from the leader for the same index
 
 func DropAppend() *testlib.TestCase {
-	sm := testlib.NewStateMachine()
-	init := sm.Builder()
+	stateMachine := sm.NewStateMachine()
+	init := stateMachine.Builder()
 	init.On(
-		testlib.IsMessageSend().
+		sm.IsMessageSend().
 			And(util.IsMessageType(raftpb.MsgApp)),
 		"AppendObserved",
 	).On(
-		testlib.IsMessageSend().
+		sm.IsMessageSend().
 			And(util.IsMessageType(raftpb.MsgApp)).
 			And(util.IsReceiverSameAs("r")).
 			And(IsSameIndex("appIndex")),
-		testlib.SuccessStateLabel,
+		sm.SuccessStateLabel,
 	)
 
 	filters := testlib.NewFilterSet()
 	filters.AddFilter(
 		testlib.If(
-			testlib.IsMessageSend().
+			sm.IsMessageSend().
 				And(util.IsMessageType(raftpb.MsgApp)),
 		).Then(
 			testlib.OnceAction(RecordIndex("appIndex")),
@@ -69,7 +70,7 @@ func DropAppend() *testlib.TestCase {
 	testcase := testlib.NewTestCase(
 		"DropAppend",
 		1*time.Minute,
-		sm,
+		stateMachine,
 		filters,
 	)
 	return testcase
