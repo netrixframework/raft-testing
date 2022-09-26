@@ -61,9 +61,9 @@ func DropAppend() *testlib.TestCase {
 			sm.IsMessageSend().
 				And(util.IsMessageType(raftpb.MsgApp)),
 		).Then(
-			testlib.OnceAction(RecordIndex("appIndex")),
-			testlib.OnceAction(util.RecordMessageReceiver("r")),
-			testlib.OnceAction(testlib.DropMessage()),
+			testlib.OnceAction("recordIndex", RecordIndex("appIndex")),
+			testlib.OnceAction("recordReceiver", util.RecordMessageReceiver("r")),
+			testlib.OnceAction("dropMessage", testlib.DropMessage()),
 		),
 	)
 

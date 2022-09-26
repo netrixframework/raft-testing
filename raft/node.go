@@ -64,6 +64,15 @@ func newNode(config *nodeConfig) (*node, error) {
 	// 	len(config.Peers),
 	// 	strings.Join(config.Peers, ","),
 	// )
+	// Truncating the log file before every new node creation
+	if _, err := os.Stat(config.LogPath); err == nil {
+		logFilePath := path.Join(config.LogPath, "replica.log")
+		logFile, err := os.OpenFile(logFilePath, os.O_RDWR|os.O_TRUNC, 0666)
+		if err == nil {
+			logFile.Close()
+		}
+	}
+
 	raftPeers := make([]raft.Peer, len(config.Peers))
 	for i, p := range config.Peers {
 		raftPeers[i] = raft.Peer{
@@ -269,6 +278,7 @@ func (n *node) Start() error {
 	// Figure out to start or restart node
 	// n.setupSnapshotter()
 	// restart := n.setupWAL()
+	n.storage.Reset()
 	config := &raft.Config{
 		ID:                        uint64(n.ID),
 		ElectionTick:              10,
@@ -321,6 +331,12 @@ func (n *node) raftloop() {
 					"new_state": nodeState.RaftState.String(),
 					"term":      strconv.FormatUint(nodeState.Term, 10),
 				})
+				// if nodeState.RaftState == raft.StateLeader {
+				// 	var buf bytes.Buffer
+				// 	if err := gob.NewEncoder(&buf).Encode(kv{"test", "test"}); err == nil {
+				// 		n.Propose(buf.Bytes())
+				// 	}
+				// }
 			}
 			if n.state.UpdateTermState(nodeState.Term) {
 				PublishEventToNetrix("TermChange", map[string]string{
@@ -334,10 +350,12 @@ func (n *node) raftloop() {
 				})
 			}
 			// n.wal.Save(rd.HardState, rd.Entries)
-			// if !raft.IsEmptySnap(rd.Snapshot) {
-			// 	n.saveSnapshot(rd.Snapshot)
-			// 	n.restoreSnapshot()
-			// }
+			if !raft.IsEmptySnap(rd.Snapshot) {
+				n.storage.ApplySnapshot(rd.Snapshot)
+				// n.saveSnapshot(rd.Snapshot)
+				// n.restoreSnapshot()
+			}
+			n.storage.Append(rd.Entries)
 			n.sendMessages(rd.Messages)
 			n.applyEntries(rd.CommittedEntries)
 			// n.takeSnapshot()
@@ -386,7 +404,6 @@ func (n *node) sendMessages(msgs []raftpb.Message) {
 }
 
 func (n *node) applyEntries(entries []raftpb.Entry) {
-	n.storage.Append(entries)
 	if len(entries) == 0 {
 		return
 	}
@@ -395,8 +412,9 @@ func (n *node) applyEntries(entries []raftpb.Entry) {
 		log.Fatal("committed entry is too big")
 		return
 	}
-
-	entries = entries[commitIndex-entries[0].Index+1:]
+	if commitIndex-entries[0].Index+1 < uint64(len(entries)) {
+		entries = entries[commitIndex-entries[0].Index+1:]
+	}
 
 	for _, entry := range entries {
 		PublishEventToNetrix("Commit", map[string]string{
@@ -453,7 +471,9 @@ func (n *node) Process(ctx context.Context, m raftpb.Message) error {
 		return nil
 	}
 	// n.timer.Track(m)
-	return n.GetRN().Step(ctx, m)
+	rn := n.GetRN()
+
+	return rn.Step(ctx, m)
 }
 
 func (n *node) Propose(data []byte) error {

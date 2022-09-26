@@ -415,7 +415,7 @@ func (r *raft) send(m pb.Message) {
 			m.Term = r.Term
 		}
 	}
-	r.logger.Infof("sending message %s to %d", m.String(), m.To)
+	r.logger.Debugf("sending message %s to %d", m.String(), m.To)
 	r.msgs = append(r.msgs, m)
 }
 
@@ -1514,8 +1514,10 @@ func (r *raft) handleAppendEntries(m pb.Message) {
 }
 
 func (r *raft) handleHeartbeat(m pb.Message) {
-	r.raftLog.commitTo(m.Commit)
-	r.send(pb.Message{To: m.From, Type: pb.MsgHeartbeatResp, Context: m.Context})
+	committed := r.raftLog.commitTo(m.Commit)
+	if committed {
+		r.send(pb.Message{To: m.From, Type: pb.MsgHeartbeatResp, Context: m.Context})
+	}
 }
 
 func (r *raft) handleSnapshot(m pb.Message) {

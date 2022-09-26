@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/netrixframework/netrix/log"
 	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/types"
 	"go.etcd.io/etcd/raft/v3"
@@ -73,7 +74,15 @@ func IsStateLeader() sm.Condition {
 			if !ok {
 				return false
 			}
-			return newState == raft.StateLeader.String()
+			if newState == raft.StateLeader.String() {
+				c.Logger.With(log.LogParams{
+					"replica": e.Replica,
+					"state":   newState,
+					"term":    eType.Params["term"],
+				}).Info("New leader")
+				return true
+			}
+			return false
 		default:
 			return false
 		}

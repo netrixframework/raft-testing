@@ -30,7 +30,7 @@ func ExpectAppend() *testlib.TestCase {
 			sm.IsMessageSend().
 				And(util.IsMessageType(raftpb.MsgApp)),
 		).Then(
-			testlib.OnceAction(util.RecordMessageReceiver("r")),
+			testlib.OnceAction("recordReceiver", util.RecordMessageReceiver("r")),
 			testlib.DeliverMessage(),
 		),
 	)

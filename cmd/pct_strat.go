@@ -15,6 +15,7 @@ import (
 	"github.com/netrixframework/netrix/strategies"
 	"github.com/netrixframework/netrix/strategies/pct"
 	"github.com/netrixframework/netrix/types"
+	raft "github.com/netrixframework/raft-testing/raft/protocol"
 	"github.com/netrixframework/raft-testing/tests/util"
 	"github.com/spf13/cobra"
 )
@@ -64,6 +65,38 @@ func IsCommit(index int) sm.Condition {
 	}
 }
 
+func CountTermLeader() sm.Action {
+	return func(e *types.Event, ctx *sm.Context) {
+		switch eType := e.Type.(type) {
+		case *types.GenericEventType:
+			if eType.T != "StateChange" {
+				return
+			}
+			newState, ok := eType.Params["new_state"]
+			if !ok {
+				return
+			}
+			if newState == raft.StateLeader.String() {
+				key := "leaders"
+				if ctx.Vars.Exists(key) {
+					cur, _ := ctx.Vars.GetInt(key)
+					ctx.Vars.Set(key, cur+1)
+				} else {
+					ctx.Vars.Set(key, 1)
+				}
+			}
+		default:
+		}
+	}
+}
+
+func MoreThanOneLeader() sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
+		leaders, ok := c.Vars.GetInt("leaders")
+		return ok && leaders > 1
+	}
+}
+
 var pctStrat = &cobra.Command{
 	Use: "pct",
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -74,21 +107,26 @@ var pctStrat = &cobra.Command{
 
 		var strategy strategies.Strategy = pct.NewPCTStrategy(&pct.PCTStrategyConfig{
 			RandSrc:        rand.NewSource(time.Now().UnixMilli()),
-			MaxEvents:      1000,
+			MaxEvents:      100,
 			Depth:          6,
 			RecordFilePath: "/Users/srinidhin/Local/data/testing/raft/t",
 		})
 
 		property := sm.NewStateMachine()
-		builder := property.Builder()
-		builder.On(IsCommit(1), sm.SuccessStateLabel)
+		start := property.Builder()
+		// start.On(IsCommit(6), sm.SuccessStateLabel)
+		start.On(
+			sm.ConditionWithAction(util.IsStateLeader(), CountTermLeader()),
+			sm.StartStateLabel,
+		)
+		start.On(MoreThanOneLeader(), sm.SuccessStateLabel)
 
 		strategy = strategies.NewStrategyWithProperty(strategy, property)
 
 		driver := strategies.NewStrategyDriver(
 			&config.Config{
 				APIServerAddr: "127.0.0.1:7074",
-				NumReplicas:   3,
+				NumReplicas:   5,
 				LogConfig: config.LogConfig{
 					Format: "json",
 					Path:   "/Users/srinidhin/Local/data/testing/raft/t/checker.log",
@@ -97,9 +135,9 @@ var pctStrat = &cobra.Command{
 			&util.RaftMsgParser{},
 			strategy,
 			&strategies.StrategyConfig{
-				Iterations:       10,
+				Iterations:       50,
 				IterationTimeout: 10 * time.Second,
-				SetupFunc:        r.setupFunc,
+				SetupFunc:        pctSetupFunc(r.setupFunc),
 				StepFunc:         r.stepFunc,
 				FinalizeFunc:     r.finalize,
 			},

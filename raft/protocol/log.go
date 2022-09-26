@@ -105,7 +105,7 @@ func (l *raftLog) maybeAppend(index, logTerm, committed uint64, ents ...pb.Entry
 				l.logger.Panicf("index, %d, is out of range [%d]", ci-offset, len(ents))
 			}
 			li := l.append(ents[ci-offset:]...)
-			l.logger.Infof("appending from index %d, resulting last index: %d", offset, li)
+			l.logger.Debugf("appending from index %d, resulting last index: %d", offset, li)
 		}
 		l.commitTo(min(committed, lastnewi))
 		return lastnewi, true
@@ -240,14 +240,17 @@ func (l *raftLog) lastIndex() uint64 {
 	return i
 }
 
-func (l *raftLog) commitTo(tocommit uint64) {
+func (l *raftLog) commitTo(tocommit uint64) bool {
 	// never decrease commit
 	if l.committed < tocommit {
 		if l.lastIndex() < tocommit {
-			l.logger.Panicf("tocommit(%d) is out of range [lastIndex(%d)]. Was the raft log corrupted, truncated, or lost?", tocommit, l.lastIndex())
+			l.logger.Debugf("tocommit(%d) is out of range [lastIndex(%d)]. Was the raft log corrupted, truncated, or lost?", tocommit, l.lastIndex())
+			return false
 		}
 		l.committed = tocommit
+		return true
 	}
+	return true
 }
 
 func (l *raftLog) appliedTo(i uint64) {

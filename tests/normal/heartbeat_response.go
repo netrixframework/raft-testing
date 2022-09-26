@@ -29,7 +29,7 @@ func HeartbeatResponse() *testlib.TestCase {
 		testlib.If(sm.IsMessageSend().
 			And(util.IsMessageType(raftpb.MsgHeartbeat)),
 		).Then(
-			testlib.OnceAction(util.RecordMessageReceiver("r")),
+			testlib.OnceAction("recordReceiver", util.RecordMessageReceiver("r")),
 			testlib.DeliverMessage(),
 		),
 	)

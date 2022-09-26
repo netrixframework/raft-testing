@@ -427,12 +427,16 @@ func (n *node) Propose(ctx context.Context, data []byte) error {
 }
 
 func (n *node) Step(ctx context.Context, m pb.Message) error {
-	n.rn.raft.logger.Infof("received message %s from %d", m.String(), m.From)
+	n.rn.raft.logger.Debugf("received message %s from %d", m.String(), m.From)
 	// ignore unexpected local messages receiving over network
 	if IsLocalMsg(m.Type) {
 		// TODO: return an error?
 		return nil
 	}
+	// TODO: Hack to ignore messages from a much higher term
+	// if m.Term > n.Status().Term+2 {
+	// 	return nil
+	// }
 	return n.step(ctx, m)
 }
 
