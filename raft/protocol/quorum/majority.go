@@ -24,6 +24,10 @@ import (
 // MajorityConfig is a set of IDs that uses majority quorums to make decisions.
 type MajorityConfig map[uint64]struct{}
 
+func (c MajorityConfig) IDs() map[uint64]struct{} {
+	return c
+}
+
 func (c MajorityConfig) String() string {
 	sl := make([]uint64, 0, len(c))
 	for id := range c {

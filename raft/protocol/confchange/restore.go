@@ -15,8 +15,8 @@
 package confchange
 
 import (
+	pb "github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 	"github.com/netrixframework/raft-testing/raft/protocol/tracker"
-	pb "go.etcd.io/etcd/raft/v3/raftpb"
 )
 
 // toConfChangeSingle translates a conf state into 1) a slice of operations creating

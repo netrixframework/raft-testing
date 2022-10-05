@@ -27,8 +27,8 @@ import (
 
 	"github.com/netrixframework/raft-testing/raft/protocol/confchange"
 	"github.com/netrixframework/raft-testing/raft/protocol/quorum"
+	pb "github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 	"github.com/netrixframework/raft-testing/raft/protocol/tracker"
-	pb "go.etcd.io/etcd/raft/v3/raftpb"
 )
 
 // None is a placeholder node ID used when there is no leader.
@@ -73,6 +73,7 @@ const (
 // ErrProposalDropped is returned when the proposal is ignored by some cases,
 // so that the proposer can be notified and fail fast.
 var ErrProposalDropped = errors.New("raft proposal dropped")
+var ErrNodeRemoved = errors.New("current node removed from config")
 
 // lockedRand is a small wrapper around rand.Rand to provide
 // synchronization among multiple raft groups. Only the methods needed
@@ -274,7 +275,7 @@ type raft struct {
 	// configuration change (if any). Config changes are only allowed to
 	// be proposed if the leader's applied index is greater than this
 	// value.
-	pendingConfIndex uint64
+	// pendingConfIndex uint64
 	// an estimate of the size of the uncommitted tail of the Raft log. Used to
 	// prevent unbounded log growth. Only maintained by the leader. Reset on
 	// term changes.
@@ -549,26 +550,26 @@ func (r *raft) advance(rd Ready) {
 	// new Commit index, this does not mean that we're also applying
 	// all of the new entries due to commit pagination by size.
 	if newApplied := rd.appliedCursor(); newApplied > 0 {
-		oldApplied := r.raftLog.applied
+		// oldApplied := r.raftLog.applied
 		r.raftLog.appliedTo(newApplied)
 
-		if r.prs.Config.AutoLeave && oldApplied <= r.pendingConfIndex && newApplied >= r.pendingConfIndex && r.state == StateLeader {
-			// If the current (and most recent, at least for this leader's term)
-			// configuration should be auto-left, initiate that now. We use a
-			// nil Data which unmarshals into an empty ConfChangeV2 and has the
-			// benefit that appendEntry can never refuse it based on its size
-			// (which registers as zero).
-			ent := pb.Entry{
-				Type: pb.EntryConfChangeV2,
-				Data: nil,
-			}
-			// There's no way in which this proposal should be able to be rejected.
-			if !r.appendEntry(ent) {
-				panic("refused un-refusable auto-leaving ConfChangeV2")
-			}
-			r.pendingConfIndex = r.raftLog.lastIndex()
-			r.logger.Infof("initiating automatic transition out of joint configuration %s", r.prs.Config)
-		}
+		// if r.prs.Config.AutoLeave && oldApplied <= r.pendingConfIndex && newApplied >= r.pendingConfIndex && r.state == StateLeader {
+		// 	// If the current (and most recent, at least for this leader's term)
+		// 	// configuration should be auto-left, initiate that now. We use a
+		// 	// nil Data which unmarshals into an empty ConfChangeV2 and has the
+		// 	// benefit that appendEntry can never refuse it based on its size
+		// 	// (which registers as zero).
+		// 	ent := pb.Entry{
+		// 		Type: pb.EntryConfChangeV2,
+		// 		Data: nil,
+		// 	}
+		// 	// There's no way in which this proposal should be able to be rejected.
+		// 	if !r.appendEntry(ent) {
+		// 		panic("refused un-refusable auto-leaving ConfChangeV2")
+		// 	}
+		// 	r.pendingConfIndex = r.raftLog.lastIndex()
+		// 	r.logger.Infof("initiating automatic transition out of joint configuration %s", r.prs.Config)
+		// }
 	}
 
 	if len(rd.Entries) > 0 {
@@ -614,7 +615,7 @@ func (r *raft) reset(term uint64) {
 		}
 	})
 
-	r.pendingConfIndex = 0
+	// r.pendingConfIndex = 0
 	r.uncommittedSize = 0
 	r.readOnly = newReadOnly(r.readOnly.option)
 }
@@ -636,7 +637,10 @@ func (r *raft) appendEntry(es ...pb.Entry) (accepted bool) {
 	}
 	// use latest "last" index after truncate/append
 	li = r.raftLog.append(es...)
-	r.prs.Progress[r.id].MaybeUpdate(li)
+	progress, ok := r.prs.Progress[r.id]
+	if ok {
+		progress.MaybeUpdate(li)
+	}
 	// Regardless of maybeCommit's return, our caller will call bcastAppend.
 	r.maybeCommit()
 	return true
@@ -743,18 +747,19 @@ func (r *raft) becomeLeader() {
 	// safe to delay any future proposals until we commit all our
 	// pending log entries, and scanning the entire tail of the log
 	// could be expensive.
-	r.pendingConfIndex = r.raftLog.lastIndex()
 
-	emptyEnt := pb.Entry{Data: nil}
-	if !r.appendEntry(emptyEnt) {
-		// This won't happen because we just called reset() above.
-		r.logger.Panic("empty entry was dropped")
-	}
-	// As a special case, don't count the initial empty entry towards the
-	// uncommitted log quota. This is because we want to preserve the
-	// behavior of allowing one entry larger than quota if the current
-	// usage is zero.
-	r.reduceUncommittedSize([]pb.Entry{emptyEnt})
+	// r.pendingConfIndex = r.raftLog.lastIndex()
+
+	// emptyEnt := pb.Entry{Data: nil}
+	// if !r.appendEntry(emptyEnt) {
+	// 	// This won't happen because we just called reset() above.
+	// 	r.logger.Panic("empty entry was dropped")
+	// }
+	// // As a special case, don't count the initial empty entry towards the
+	// // uncommitted log quota. This is because we want to preserve the
+	// // behavior of allowing one entry larger than quota if the current
+	// // usage is zero.
+	// r.reduceUncommittedSize([]pb.Entry{emptyEnt})
 	r.logger.Infof("%x became leader at term %d", r.id, r.Term)
 }
 
@@ -1002,7 +1007,7 @@ func stepLeader(r *raft, m pb.Message) error {
 		//
 		// TODO(tbg): I added a TODO in removeNode, it doesn't seem that the
 		// leader steps down when removing itself. I might be missing something.
-		if pr := r.prs.Progress[r.id]; pr != nil {
+		if pr, ok := r.prs.Progress[r.id]; ok && pr != nil {
 			pr.RecentActive = true
 		}
 		if !r.prs.QuorumActive() {
@@ -1021,7 +1026,8 @@ func stepLeader(r *raft, m pb.Message) error {
 		if len(m.Entries) == 0 {
 			r.logger.Panicf("%x stepped empty MsgProp", r.id)
 		}
-		if r.prs.Progress[r.id] == nil {
+		progress, ok := r.prs.Progress[r.id]
+		if !ok || progress == nil {
 			// If we are not currently a member of the range (i.e. this node
 			// was removed from the configuration while serving as leader),
 			// drop any new proposals.
@@ -1031,6 +1037,33 @@ func stepLeader(r *raft, m pb.Message) error {
 			r.logger.Debugf("%x [term %d] transfer leadership to %x is in progress; dropping proposal", r.id, r.Term, r.leadTransferee)
 			return ErrProposalDropped
 		}
+
+		// 		alreadyPending := r.pendingConfIndex > r.raftLog.applied
+		// 		alreadyJoint := len(r.prs.Config.Voters[1]) > 0
+		// 		wantsLeaveJoint := len(cc.AsV2().Changes) == 0
+
+		// 		var refused string
+		// 		if alreadyPending {
+		// 			refused = fmt.Sprintf("possible unapplied conf change at index %d (applied to %d)", r.pendingConfIndex, r.raftLog.applied)
+		// 		} else if alreadyJoint && !wantsLeaveJoint {
+		// 			refused = "must transition out of joint config first"
+		// 		} else if !alreadyJoint && wantsLeaveJoint {
+		// 			refused = "not in joint state; refusing empty conf change"
+		// 		}
+
+		// 		if refused != "" {
+		// 			r.logger.Infof("%x ignoring conf change %v at config %s: %s", r.id, cc, r.prs.Config, refused)
+		// 			m.Entries[i] = pb.Entry{Type: pb.EntryNormal}
+		// 		} else {
+		// 			r.pendingConfIndex = r.raftLog.lastIndex() + uint64(i) + 1
+		// 		}
+		// 	}
+		// }
+
+		if !r.appendEntry(m.Entries...) {
+			return ErrProposalDropped
+		}
+		r.bcastAppend()
 
 		for i := range m.Entries {
 			e := &m.Entries[i]
@@ -1049,32 +1082,9 @@ func stepLeader(r *raft, m pb.Message) error {
 				cc = ccc
 			}
 			if cc != nil {
-				alreadyPending := r.pendingConfIndex > r.raftLog.applied
-				alreadyJoint := len(r.prs.Config.Voters[1]) > 0
-				wantsLeaveJoint := len(cc.AsV2().Changes) == 0
-
-				var refused string
-				if alreadyPending {
-					refused = fmt.Sprintf("possible unapplied conf change at index %d (applied to %d)", r.pendingConfIndex, r.raftLog.applied)
-				} else if alreadyJoint && !wantsLeaveJoint {
-					refused = "must transition out of joint config first"
-				} else if !alreadyJoint && wantsLeaveJoint {
-					refused = "not in joint state; refusing empty conf change"
-				}
-
-				if refused != "" {
-					r.logger.Infof("%x ignoring conf change %v at config %s: %s", r.id, cc, r.prs.Config, refused)
-					m.Entries[i] = pb.Entry{Type: pb.EntryNormal}
-				} else {
-					r.pendingConfIndex = r.raftLog.lastIndex() + uint64(i) + 1
-				}
+				r.applyConfChange(cc.AsV2())
 			}
 		}
-
-		if !r.appendEntry(m.Entries...) {
-			return ErrProposalDropped
-		}
-		r.bcastAppend()
 		return nil
 	case pb.MsgReadIndex:
 		// only one voting member (the leader) in the cluster
@@ -1238,6 +1248,7 @@ func stepLeader(r *raft, m pb.Message) error {
 		} else {
 			oldPaused := pr.IsPaused()
 			if pr.MaybeUpdate(m.Index) {
+				r.logger.Debugf("updated match index of %d to %d", m.From, pr.Match)
 				switch {
 				case pr.State == tracker.StateProbe:
 					pr.BecomeReplicate()
@@ -1562,7 +1573,7 @@ func (r *raft) restore(s pb.Snapshot) bool {
 	for _, set := range [][]uint64{
 		cs.Voters,
 		cs.Learners,
-		cs.VotersOutgoing,
+		// cs.VotersOutgoing,
 		// `LearnersNext` doesn't need to be checked. According to the rules, if a peer in
 		// `LearnersNext`, it has to be in `VotersOutgoing`.
 	} {
@@ -1621,8 +1632,8 @@ func (r *raft) restore(s pb.Snapshot) bool {
 // promotable indicates whether state machine can be promoted to leader,
 // which is true when its own id is in progress list.
 func (r *raft) promotable() bool {
-	pr := r.prs.Progress[r.id]
-	return pr != nil && !pr.IsLearner && !r.raftLog.hasPendingSnapshot()
+	pr, ok := r.prs.Progress[r.id]
+	return ok && pr != nil && !pr.IsLearner && !r.raftLog.hasPendingSnapshot()
 }
 
 func (r *raft) applyConfChange(cc pb.ConfChangeV2) pb.ConfState {
@@ -1631,11 +1642,11 @@ func (r *raft) applyConfChange(cc pb.ConfChangeV2) pb.ConfState {
 			Tracker:   r.prs,
 			LastIndex: r.raftLog.lastIndex(),
 		}
-		if cc.LeaveJoint() {
-			return changer.LeaveJoint()
-		} else if autoLeave, ok := cc.EnterJoint(); ok {
-			return changer.EnterJoint(autoLeave, cc.Changes...)
-		}
+		// if cc.LeaveJoint() {
+		// 	return changer.LeaveJoint()
+		// } else if autoLeave, ok := cc.EnterJoint(); ok {
+		// 	return changer.EnterJoint(autoLeave, cc.Changes...)
+		// }
 		return changer.Simple(cc.Changes...)
 	}()
 

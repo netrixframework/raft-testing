@@ -21,8 +21,8 @@ import (
 	"testing"
 	"testing/quick"
 
+	pb "github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 	"github.com/netrixframework/raft-testing/raft/protocol/tracker"
-	pb "go.etcd.io/etcd/raft/v3/raftpb"
 )
 
 // TestConfChangeQuick uses quickcheck to verify that simple and joint config

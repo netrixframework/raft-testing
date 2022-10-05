@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"sync"
 
-	raftpb "go.etcd.io/etcd/raft/v3/raftpb"
+	raftpb "github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 )
 
 type httpKVAPI struct {

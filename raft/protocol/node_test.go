@@ -24,8 +24,8 @@ import (
 	"testing"
 	"time"
 
+	raftpb "github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 	"go.etcd.io/etcd/client/pkg/v3/testutil"
-	raftpb "go.etcd.io/etcd/raft/v3/raftpb"
 )
 
 // readyWithTimeout selects from n.Ready() with a 1-second timeout. It

@@ -14,7 +14,7 @@
 
 package protocol
 
-import pb "go.etcd.io/etcd/raft/v3/raftpb"
+import pb "github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 
 // ReadState provides state for read only query.
 // It's caller's responsibility to call ReadIndex first before getting

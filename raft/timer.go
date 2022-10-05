@@ -8,7 +8,7 @@ import (
 
 	netrixclient "github.com/netrixframework/go-clientlibrary"
 	raft "github.com/netrixframework/raft-testing/raft/protocol"
-	raftpb "go.etcd.io/etcd/raft/v3/raftpb"
+	raftpb "github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 )
 
 var (

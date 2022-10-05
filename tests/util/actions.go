@@ -7,8 +7,8 @@ import (
 	"github.com/netrixframework/netrix/log"
 	"github.com/netrixframework/netrix/testlib"
 	"github.com/netrixframework/netrix/types"
-	"go.etcd.io/etcd/raft/v3"
-	"go.etcd.io/etcd/raft/v3/raftpb"
+	raft "github.com/netrixframework/raft-testing/raft/protocol"
+	"github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 )
 
 func SetKeyValueAction(key, value string) testlib.Action {

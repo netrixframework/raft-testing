@@ -10,7 +10,7 @@ import (
 
 	netrixclient "github.com/netrixframework/go-clientlibrary"
 	ntypes "github.com/netrixframework/netrix/types"
-	raftpb "go.etcd.io/etcd/raft/v3/raftpb"
+	raftpb "github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 )
 
 type netrixTransport struct {

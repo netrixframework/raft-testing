@@ -7,17 +7,18 @@ import (
 	"github.com/netrixframework/netrix/log"
 	"github.com/netrixframework/netrix/strategies"
 	"github.com/netrixframework/netrix/types"
+	raft "github.com/netrixframework/raft-testing/raft/protocol"
+	"github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 	"github.com/netrixframework/raft-testing/tests/util"
 	"github.com/spf13/cobra"
-	"go.etcd.io/etcd/raft/v3"
-	"go.etcd.io/etcd/raft/v3/raftpb"
 )
 
 type records struct {
-	duration     map[int][]time.Duration
-	curStartTime time.Time
-	lock         *sync.Mutex
-	timeSet      bool
+	totalStartTime time.Time
+	duration       map[int][]time.Duration
+	curStartTime   time.Time
+	lock           *sync.Mutex
+	timeSet        bool
 }
 
 func newRecords() *records {
@@ -30,6 +31,9 @@ func newRecords() *records {
 func (r *records) setupFunc(*strategies.Context) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
+	if r.totalStartTime.IsZero() {
+		r.totalStartTime = time.Now()
+	}
 	r.curStartTime = time.Now()
 	r.timeSet = true
 }
@@ -82,6 +86,7 @@ func (r *records) finalize(ctx *strategies.Context) {
 		}
 	}
 	iterations := len(r.duration)
+	totalRunTime := time.Since(r.totalStartTime)
 	r.lock.Unlock()
 	if count != 0 {
 		avg := time.Duration(sum / count)
@@ -89,6 +94,7 @@ func (r *records) finalize(ctx *strategies.Context) {
 			"completed_runs":    iterations,
 			"average_time":      avg.String(),
 			"elections_per_run": count / iterations,
+			"total_run_time":    totalRunTime.String(),
 		}).Info("Metrics")
 	}
 }
@@ -100,5 +106,6 @@ func StrategyCommand() *cobra.Command {
 	cmd.AddCommand(timeoutStrat)
 	cmd.AddCommand(pctStrat)
 	cmd.AddCommand(pctTestStrat)
+	cmd.AddCommand(testStrat)
 	return cmd
 }

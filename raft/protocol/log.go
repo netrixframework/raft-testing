@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"log"
 
-	pb "go.etcd.io/etcd/raft/v3/raftpb"
+	pb "github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 )
 
 type raftLog struct {
@@ -190,6 +190,7 @@ func (l *raftLog) unstableEntries() []pb.Entry {
 func (l *raftLog) nextEnts() (ents []pb.Entry) {
 	off := max(l.applied+1, l.firstIndex())
 	if l.committed+1 > off {
+		l.logger.Infof("new committed entries from %d to %d", off, l.committed+1)
 		ents, err := l.slice(off, l.committed+1, l.maxNextEntsSize)
 		if err != nil {
 			l.logger.Panicf("unexpected error when getting unapplied entries (%v)", err)
@@ -336,7 +337,7 @@ func (l *raftLog) matchTerm(i, term uint64) bool {
 }
 
 func (l *raftLog) maybeCommit(maxIndex, term uint64) bool {
-	if maxIndex > l.committed && l.zeroTermOnErrCompacted(l.term(maxIndex)) == term {
+	if maxIndex > l.committed {
 		l.commitTo(maxIndex)
 		return true
 	}

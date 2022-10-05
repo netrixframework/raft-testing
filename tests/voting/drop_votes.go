@@ -7,8 +7,8 @@ import (
 	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/testlib"
 	"github.com/netrixframework/netrix/types"
+	"github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 	"github.com/netrixframework/raft-testing/tests/util"
-	"go.etcd.io/etcd/raft/v3/raftpb"
 )
 
 // Test if the leader is elected despite dropping $f$ vote response messages

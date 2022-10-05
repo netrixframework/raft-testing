@@ -23,8 +23,8 @@ import (
 	"strings"
 	"testing"
 
+	pb "github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 	"github.com/netrixframework/raft-testing/raft/protocol/tracker"
-	pb "go.etcd.io/etcd/raft/v3/raftpb"
 )
 
 // nextEnts returns the appliable entries and updates the applied index
@@ -3098,70 +3098,70 @@ func TestSlowNodeRestore(t *testing.T) {
 }
 
 // TestStepConfig tests that when raft step msgProp in EntryConfChange type,
-// it appends the entry to log and sets pendingConf to be true.
-func TestStepConfig(t *testing.T) {
-	// a raft that cannot make progress
-	r := newTestRaft(1, 10, 1, newTestMemoryStorage(withPeers(1, 2)))
-	r.becomeCandidate()
-	r.becomeLeader()
-	index := r.raftLog.lastIndex()
-	r.Step(pb.Message{From: 1, To: 1, Type: pb.MsgProp, Entries: []pb.Entry{{Type: pb.EntryConfChange}}})
-	if g := r.raftLog.lastIndex(); g != index+1 {
-		t.Errorf("index = %d, want %d", g, index+1)
-	}
-	if r.pendingConfIndex != index+1 {
-		t.Errorf("pendingConfIndex = %d, want %d", r.pendingConfIndex, index+1)
-	}
-}
+// // it appends the entry to log and sets pendingConf to be true.
+// func TestStepConfig(t *testing.T) {
+// 	// a raft that cannot make progress
+// 	r := newTestRaft(1, 10, 1, newTestMemoryStorage(withPeers(1, 2)))
+// 	r.becomeCandidate()
+// 	r.becomeLeader()
+// 	index := r.raftLog.lastIndex()
+// 	r.Step(pb.Message{From: 1, To: 1, Type: pb.MsgProp, Entries: []pb.Entry{{Type: pb.EntryConfChange}}})
+// 	if g := r.raftLog.lastIndex(); g != index+1 {
+// 		t.Errorf("index = %d, want %d", g, index+1)
+// 	}
+// 	if r.pendingConfIndex != index+1 {
+// 		t.Errorf("pendingConfIndex = %d, want %d", r.pendingConfIndex, index+1)
+// 	}
+// }
 
 // TestStepIgnoreConfig tests that if raft step the second msgProp in
 // EntryConfChange type when the first one is uncommitted, the node will set
 // the proposal to noop and keep its original state.
-func TestStepIgnoreConfig(t *testing.T) {
-	// a raft that cannot make progress
-	r := newTestRaft(1, 10, 1, newTestMemoryStorage(withPeers(1, 2)))
-	r.becomeCandidate()
-	r.becomeLeader()
-	r.Step(pb.Message{From: 1, To: 1, Type: pb.MsgProp, Entries: []pb.Entry{{Type: pb.EntryConfChange}}})
-	index := r.raftLog.lastIndex()
-	pendingConfIndex := r.pendingConfIndex
-	r.Step(pb.Message{From: 1, To: 1, Type: pb.MsgProp, Entries: []pb.Entry{{Type: pb.EntryConfChange}}})
-	wents := []pb.Entry{{Type: pb.EntryNormal, Term: 1, Index: 3, Data: nil}}
-	ents, err := r.raftLog.entries(index+1, noLimit)
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-	if !reflect.DeepEqual(ents, wents) {
-		t.Errorf("ents = %+v, want %+v", ents, wents)
-	}
-	if r.pendingConfIndex != pendingConfIndex {
-		t.Errorf("pendingConfIndex = %d, want %d", r.pendingConfIndex, pendingConfIndex)
-	}
-}
+// func TestStepIgnoreConfig(t *testing.T) {
+// 	// a raft that cannot make progress
+// 	r := newTestRaft(1, 10, 1, newTestMemoryStorage(withPeers(1, 2)))
+// 	r.becomeCandidate()
+// 	r.becomeLeader()
+// 	r.Step(pb.Message{From: 1, To: 1, Type: pb.MsgProp, Entries: []pb.Entry{{Type: pb.EntryConfChange}}})
+// 	index := r.raftLog.lastIndex()
+// 	pendingConfIndex := r.pendingConfIndex
+// 	r.Step(pb.Message{From: 1, To: 1, Type: pb.MsgProp, Entries: []pb.Entry{{Type: pb.EntryConfChange}}})
+// 	wents := []pb.Entry{{Type: pb.EntryNormal, Term: 1, Index: 3, Data: nil}}
+// 	ents, err := r.raftLog.entries(index+1, noLimit)
+// 	if err != nil {
+// 		t.Fatalf("unexpected error %v", err)
+// 	}
+// 	if !reflect.DeepEqual(ents, wents) {
+// 		t.Errorf("ents = %+v, want %+v", ents, wents)
+// 	}
+// 	if r.pendingConfIndex != pendingConfIndex {
+// 		t.Errorf("pendingConfIndex = %d, want %d", r.pendingConfIndex, pendingConfIndex)
+// 	}
+// }
 
-// TestNewLeaderPendingConfig tests that new leader sets its pendingConfigIndex
-// based on uncommitted entries.
-func TestNewLeaderPendingConfig(t *testing.T) {
-	tests := []struct {
-		addEntry      bool
-		wpendingIndex uint64
-	}{
-		{false, 0},
-		{true, 1},
-	}
-	for i, tt := range tests {
-		r := newTestRaft(1, 10, 1, newTestMemoryStorage(withPeers(1, 2)))
-		if tt.addEntry {
-			mustAppendEntry(r, pb.Entry{Type: pb.EntryNormal})
-		}
-		r.becomeCandidate()
-		r.becomeLeader()
-		if r.pendingConfIndex != tt.wpendingIndex {
-			t.Errorf("#%d: pendingConfIndex = %d, want %d",
-				i, r.pendingConfIndex, tt.wpendingIndex)
-		}
-	}
-}
+// // TestNewLeaderPendingConfig tests that new leader sets its pendingConfigIndex
+// // based on uncommitted entries.
+// func TestNewLeaderPendingConfig(t *testing.T) {
+// 	tests := []struct {
+// 		addEntry      bool
+// 		wpendingIndex uint64
+// 	}{
+// 		{false, 0},
+// 		{true, 1},
+// 	}
+// 	for i, tt := range tests {
+// 		r := newTestRaft(1, 10, 1, newTestMemoryStorage(withPeers(1, 2)))
+// 		if tt.addEntry {
+// 			mustAppendEntry(r, pb.Entry{Type: pb.EntryNormal})
+// 		}
+// 		r.becomeCandidate()
+// 		r.becomeLeader()
+// 		if r.pendingConfIndex != tt.wpendingIndex {
+// 			t.Errorf("#%d: pendingConfIndex = %d, want %d",
+// 				i, r.pendingConfIndex, tt.wpendingIndex)
+// 		}
+// 	}
+// }
 
 // TestAddNode tests that addNode could update nodes correctly.
 func TestAddNode(t *testing.T) {

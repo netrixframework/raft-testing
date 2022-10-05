@@ -17,8 +17,8 @@ package protocol
 import (
 	"errors"
 
+	pb "github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 	"github.com/netrixframework/raft-testing/raft/protocol/tracker"
-	pb "go.etcd.io/etcd/raft/v3/raftpb"
 )
 
 // ErrStepLocalMsg is returned when try to step a local raft message

@@ -32,7 +32,7 @@ import (
 	"sort"
 	"testing"
 
-	pb "go.etcd.io/etcd/raft/v3/raftpb"
+	pb "github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 )
 
 func TestFollowerUpdateTermFromMessage(t *testing.T) {

@@ -2,4 +2,4 @@ raftexample1: ./build/raft -conf build/config/one.json
 raftexample2: ./build/raft -conf build/config/two.json 
 raftexample3: ./build/raft -conf build/config/three.json 
 raftexample4: ./build/raft -conf build/config/four.json 
-raftexample5: ./build/raft -conf build/config/five.json 
+# raftexample5: ./build/raft -conf build/config/five.json 

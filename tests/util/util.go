@@ -10,7 +10,7 @@ import (
 	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/testlib"
 	"github.com/netrixframework/netrix/types"
-	"go.etcd.io/etcd/raft/v3/raftpb"
+	"github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 )
 
 type RaftMsgWrapper struct {

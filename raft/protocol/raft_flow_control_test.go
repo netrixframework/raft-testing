@@ -17,7 +17,7 @@ package protocol
 import (
 	"testing"
 
-	pb "go.etcd.io/etcd/raft/v3/raftpb"
+	pb "github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 )
 
 // TestMsgAppFlowControlFull ensures:

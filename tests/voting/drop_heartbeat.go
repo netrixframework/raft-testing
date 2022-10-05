@@ -5,8 +5,8 @@ import (
 
 	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/testlib"
+	"github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 	"github.com/netrixframework/raft-testing/tests/util"
-	"go.etcd.io/etcd/raft/v3/raftpb"
 )
 
 // Drop heartbeat messages and Append entries messages

@@ -48,11 +48,11 @@ func (c JointConfig) Describe(l AckedIndexer) string {
 // majorities.
 func (c JointConfig) CommittedIndex(l AckedIndexer) Index {
 	idx0 := c[0].CommittedIndex(l)
-	idx1 := c[1].CommittedIndex(l)
-	if idx0 < idx1 {
-		return idx0
-	}
-	return idx1
+	// idx1 := c[1].CommittedIndex(l)
+	// if idx0 < idx1 {
+	return idx0
+	// }
+	// return idx1
 }
 
 // VoteResult takes a mapping of voters to yes/no (true/false) votes and returns
@@ -60,16 +60,18 @@ func (c JointConfig) CommittedIndex(l AckedIndexer) Index {
 // requires both majority quorums to vote in favor.
 func (c JointConfig) VoteResult(votes map[uint64]bool) VoteResult {
 	r1 := c[0].VoteResult(votes)
-	r2 := c[1].VoteResult(votes)
+	// r2 := c[1].VoteResult(votes)
 
-	if r1 == r2 {
-		// If they agree, return the agreed state.
-		return r1
-	}
-	if r1 == VoteLost || r2 == VoteLost {
-		// If either config has lost, loss is the only possible outcome.
-		return VoteLost
-	}
-	// One side won, the other one is pending, so the whole outcome is.
-	return VotePending
+	return r1
+
+	// if r1 == r2 {
+	// 	// If they agree, return the agreed state.
+	// 	return r1
+	// }
+	// if r1 == VoteLost || r2 == VoteLost {
+	// 	// If either config has lost, loss is the only possible outcome.
+	// 	return VoteLost
+	// }
+	// // One side won, the other one is pending, so the whole outcome is.
+	// return VotePending
 }

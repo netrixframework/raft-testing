@@ -18,7 +18,7 @@ import (
 	"context"
 	"errors"
 
-	pb "go.etcd.io/etcd/raft/v3/raftpb"
+	pb "github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 )
 
 type SnapshotStatus int
@@ -289,10 +289,13 @@ func newNode(rn *RawNode) node {
 }
 
 func (n *node) Stop() {
+	r := n.rn.raft
+	r.logger.Info("Stopping")
 	select {
 	case n.stop <- struct{}{}:
 		// Not already stopped, so trigger it
 	case <-n.done:
+		r.logger.Info("Already stopped")
 		// Node has already been stopped - no need to do anything
 		return
 	}
@@ -372,17 +375,17 @@ func (n *node) run() {
 			// very sound and likely has bugs.
 			if _, okAfter := r.prs.Progress[r.id]; okBefore && !okAfter {
 				var found bool
-				for _, sl := range [][]uint64{cs.Voters, cs.VotersOutgoing} {
-					for _, id := range sl {
-						if id == r.id {
-							found = true
-							break
-						}
-					}
-					if found {
+				// for _, sl := range [][]uint64{cs.Voters, cs.VotersOutgoing} {
+				for _, id := range cs.Voters {
+					if id == r.id {
+						found = true
 						break
 					}
 				}
+				if found {
+					break
+				}
+				// }
 				if !found {
 					propc = nil
 				}

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"math/rand"
 	"net/http"
 	"os"
@@ -20,7 +21,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func setKeyValue(ctx *strategies.Context, apiAddr, key, value string) error {
+func setKeyValue(apiAddr, key, value string) error {
 	req, err := http.NewRequest(http.MethodPut, "http://"+apiAddr+"/"+key, strings.NewReader(value))
 	if err != nil {
 		return err
@@ -30,26 +31,17 @@ func setKeyValue(ctx *strategies.Context, apiAddr, key, value string) error {
 	return err
 }
 
-func pctSetupFunc(recordSetupFunc func(*strategies.Context)) func(*strategies.Context) {
-	return func(ctx *strategies.Context) {
-		recordSetupFunc(ctx)
-		for _, replica := range ctx.ReplicaStore.Iter() {
-			addrI, ok := replica.Info["http_api_addr"]
-			if !ok {
-				continue
-			}
-			addrS, ok := addrI.(string)
-			if !ok {
-				continue
-			}
-			if err := setKeyValue(ctx, addrS, "test", "test"); err == nil {
-				break
-			}
-		}
+func deleteNode(apiAddr, node string) error {
+	req, err := http.NewRequest(http.MethodDelete, "http://"+apiAddr+"/"+node, nil)
+	if err != nil {
+		return err
 	}
+	client := &http.Client{}
+	_, err = client.Do(req)
+	return err
 }
 
-func IsCommit(index int) sm.Condition {
+func IsCommitAt(index int) sm.Condition {
 	return func(e *types.Event, c *sm.Context) bool {
 		if !e.IsGeneric() {
 			return false
@@ -62,6 +54,33 @@ func IsCommit(index int) sm.Condition {
 			return false
 		}
 		return true
+	}
+}
+
+func IsConfigChange() sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
+		if !e.IsGeneric() {
+			return false
+		}
+		ty := e.Type.(*types.GenericEventType)
+		return ty.T == "ConfigChange"
+	}
+}
+
+func IsConfigChangeTo(voters []int) sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
+		if !e.IsGeneric() {
+			return false
+		}
+		ty := e.Type.(*types.GenericEventType)
+		if ty.T != "ConfigChange" {
+			return false
+		}
+		// c.Logger.With(log.LogParams{
+		// 	"change":   ty.Params["voters"],
+		// 	"required": fmt.Sprintf("%v", voters),
+		// }).Info("Comparing config change")
+		return ty.Params["voters"] == fmt.Sprintf("%v", voters)
 	}
 }
 
@@ -107,26 +126,38 @@ var pctStrat = &cobra.Command{
 
 		var strategy strategies.Strategy = pct.NewPCTStrategy(&pct.PCTStrategyConfig{
 			RandSrc:        rand.NewSource(time.Now().UnixMilli()),
-			MaxEvents:      100,
-			Depth:          6,
+			MaxEvents:      1000,
+			Depth:          15,
 			RecordFilePath: "/Users/srinidhin/Local/data/testing/raft/t",
 		})
 
+		// property := sm.NewStateMachine()
+		// start := property.Builder()
+		// // start.On(IsCommit(6), sm.SuccessStateLabel)
+		// start.On(
+		// 	sm.ConditionWithAction(util.IsStateLeader(), CountTermLeader()),
+		// 	sm.StartStateLabel,
+		// )
+		// start.On(MoreThanOneLeader(), sm.SuccessStateLabel)
+
 		property := sm.NewStateMachine()
 		start := property.Builder()
-		// start.On(IsCommit(6), sm.SuccessStateLabel)
+
 		start.On(
-			sm.ConditionWithAction(util.IsStateLeader(), CountTermLeader()),
+			sm.ConditionWithAction(IsNewCommit(), RecordCommit()),
 			sm.StartStateLabel,
 		)
-		start.On(MoreThanOneLeader(), sm.SuccessStateLabel)
+		start.On(
+			IsDifferentCommit(),
+			sm.SuccessStateLabel,
+		)
 
 		strategy = strategies.NewStrategyWithProperty(strategy, property)
 
 		driver := strategies.NewStrategyDriver(
 			&config.Config{
 				APIServerAddr: "127.0.0.1:7074",
-				NumReplicas:   5,
+				NumReplicas:   4,
 				LogConfig: config.LogConfig{
 					Format: "json",
 					Path:   "/Users/srinidhin/Local/data/testing/raft/t/checker.log",
@@ -135,7 +166,7 @@ var pctStrat = &cobra.Command{
 			&util.RaftMsgParser{},
 			strategy,
 			&strategies.StrategyConfig{
-				Iterations:       50,
+				Iterations:       100,
 				IterationTimeout: 10 * time.Second,
 				SetupFunc:        pctSetupFunc(r.setupFunc),
 				StepFunc:         r.stepFunc,

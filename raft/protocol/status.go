@@ -17,8 +17,8 @@ package protocol
 import (
 	"fmt"
 
+	pb "github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 	"github.com/netrixframework/raft-testing/raft/protocol/tracker"
-	pb "go.etcd.io/etcd/raft/v3/raftpb"
 )
 
 // Status contains information about this Raft peer and its view of the system.

@@ -20,8 +20,8 @@ import (
 	"strings"
 
 	"github.com/netrixframework/raft-testing/raft/protocol/quorum"
+	pb "github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 	"github.com/netrixframework/raft-testing/raft/protocol/tracker"
-	pb "go.etcd.io/etcd/raft/v3/raftpb"
 )
 
 // Changer facilitates configuration changes. It exposes methods to handle

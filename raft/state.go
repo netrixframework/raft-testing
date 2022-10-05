@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	raft "github.com/netrixframework/raft-testing/raft/protocol"
-	raftpb "go.etcd.io/etcd/raft/v3/raftpb"
+	raftpb "github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 )
 
 type nodeState struct {

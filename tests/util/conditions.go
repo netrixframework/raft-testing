@@ -7,8 +7,8 @@ import (
 	"github.com/netrixframework/netrix/log"
 	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/types"
-	"go.etcd.io/etcd/raft/v3"
-	"go.etcd.io/etcd/raft/v3/raftpb"
+	raft "github.com/netrixframework/raft-testing/raft/protocol"
+	"github.com/netrixframework/raft-testing/raft/protocol/raftpb"
 )
 
 func IsMessageType(t raftpb.MessageType) sm.Condition {
@@ -79,13 +79,26 @@ func IsStateLeader() sm.Condition {
 					"replica": e.Replica,
 					"state":   newState,
 					"term":    eType.Params["term"],
-				}).Info("New leader")
+				}).Debug("New leader")
 				return true
 			}
 			return false
 		default:
 			return false
 		}
+	}
+}
+
+func IsLeader(replica types.ReplicaID) sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
+		if !e.IsGeneric() {
+			return false
+		}
+		ty := e.Type.(*types.GenericEventType)
+		if ty.T != "StateChange" || ty.Params["new_state"] != raft.StateLeader.String() {
+			return false
+		}
+		return e.Replica == replica
 	}
 }
 
@@ -213,5 +226,36 @@ func IsTermGte(g int) sm.Condition {
 		default:
 			return false
 		}
+	}
+}
+
+type EntryCondition func(raftpb.Entry) bool
+
+func Remove(replica types.ReplicaID) EntryCondition {
+	return func(e raftpb.Entry) bool {
+		if e.Type == raftpb.EntryNormal {
+			return false
+		}
+		var cc raftpb.ConfChange
+		cc.Unmarshal(e.Data)
+		return cc.Type == raftpb.ConfChangeRemoveNode && strconv.Itoa(int(cc.NodeID)) == string(replica)
+	}
+}
+
+func IsCommitFor(cond EntryCondition) sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
+		if !e.IsGeneric() {
+			return false
+		}
+		ty := e.Type.(*types.GenericEventType)
+		if ty.T != "Commit" {
+			return false
+		}
+		var entry raftpb.Entry
+		err := entry.Unmarshal([]byte(ty.Params["entry"]))
+		if err != nil {
+			return false
+		}
+		return cond(entry)
 	}
 }
