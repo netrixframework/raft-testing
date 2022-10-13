@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"math/rand"
 	"os"
 	"os/signal"
 	"syscall"
@@ -10,57 +9,27 @@ import (
 	"github.com/netrixframework/netrix/config"
 	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/strategies"
-	"github.com/netrixframework/netrix/strategies/pct"
+	"github.com/netrixframework/netrix/strategies/unittest"
 	"github.com/netrixframework/netrix/types"
 	"github.com/netrixframework/raft-testing/tests/util"
 	"github.com/spf13/cobra"
 )
 
-var pctTestStrat = &cobra.Command{
-	Use: "pct-test",
+var testStrat = &cobra.Command{
+	Use: "test",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		termCh := make(chan os.Signal, 1)
 		signal.Notify(termCh, os.Interrupt, syscall.SIGTERM)
 
 		r := newRecords()
-
-		// filters := testlib.NewFilterSet()
-		// filters.AddFilter(
-		// 	testlib.If(util.IsMessageType(raftpb.MsgVote).Or(util.IsMessageType(raftpb.MsgVoteResp)).And(
-		// 		testlib.IsMessageAcrossPartition())).Then(testlib.DropMessage()),
-		// )
-
-		// testCase := testlib.NewTestCase("Partition", 10*time.Minute, sm.NewStateMachine(), filters)
-		// testCase.SetupFunc(func(ctx *testlib.Context) error {
-		// 	ctx.CreatePartition([]int{2, 3}, []string{"one", "two"})
-		// 	return nil
-		// })
-
-		var strategy strategies.Strategy = pct.NewPCTStrategyWithTestCase(&pct.PCTStrategyConfig{
-			RandSrc:        rand.NewSource(time.Now().UnixMilli()),
-			MaxEvents:      100,
-			Depth:          6,
-			RecordFilePath: "/Users/srinidhin/Local/data/testing/raft/t",
-		}, LivenessBugOne(), true)
+		var strategy strategies.Strategy = unittest.NewTestCaseStrategy(LivenessBugOne())
 
 		property := sm.NewStateMachine()
 		start := property.Builder()
-		// start.On(IsCommit(6), sm.SuccessStateLabel)
-
 		start.On(
 			util.IsLeader(types.ReplicaID("4")),
 			"FourLeader",
 		).On(util.IsStateLeader(), sm.SuccessStateLabel)
-
-		// start.On(
-		// 	sm.ConditionWithAction(util.IsStateLeader(), CountLeaderChanges()),
-		// 	sm.StartStateLabel,
-		// )
-		// start.On(
-		// 	sm.Count("leaderCount").Gt(4),
-		// 	sm.FailStateLabel,
-		// )
-		// start.MarkSuccess()
 
 		strategy = strategies.NewStrategyWithProperty(strategy, property)
 
@@ -89,5 +58,6 @@ var pctTestStrat = &cobra.Command{
 			driver.Stop()
 		}()
 		return driver.Start()
+
 	},
 }

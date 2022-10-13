@@ -21,6 +21,7 @@ import (
 	"math"
 	"math/rand"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -29,6 +30,8 @@ import (
 	"github.com/netrixframework/raft-testing/raft/protocol/quorum"
 	"github.com/netrixframework/raft-testing/raft/protocol/tracker"
 	pb "go.etcd.io/etcd/raft/v3/raftpb"
+
+	netrixclient "github.com/netrixframework/go-clientlibrary"
 )
 
 // None is a placeholder node ID used when there is no leader.
@@ -691,6 +694,15 @@ func (r *raft) becomeFollower(term uint64, lead uint64) {
 	r.lead = lead
 	r.state = StateFollower
 	r.logger.Infof("%x became follower at term %d", r.id, r.Term)
+
+	client, err := netrixclient.GetClient()
+	if err != nil {
+		return
+	}
+	client.PublishEventAsync("StateChange", map[string]string{
+		"new_state": StateFollower.String(),
+		"term":      strconv.FormatUint(term, 10),
+	})
 }
 
 func (r *raft) becomeCandidate() {
@@ -704,6 +716,15 @@ func (r *raft) becomeCandidate() {
 	r.Vote = r.id
 	r.state = StateCandidate
 	r.logger.Infof("%x became candidate at term %d", r.id, r.Term)
+
+	client, err := netrixclient.GetClient()
+	if err != nil {
+		return
+	}
+	client.PublishEventAsync("StateChange", map[string]string{
+		"new_state": StateCandidate.String(),
+		"term":      strconv.FormatUint(r.Term, 10),
+	})
 }
 
 func (r *raft) becomePreCandidate() {
@@ -720,6 +741,15 @@ func (r *raft) becomePreCandidate() {
 	r.lead = None
 	r.state = StatePreCandidate
 	r.logger.Infof("%x became pre-candidate at term %d", r.id, r.Term)
+
+	client, err := netrixclient.GetClient()
+	if err != nil {
+		return
+	}
+	client.PublishEventAsync("StateChange", map[string]string{
+		"new_state": StatePreCandidate.String(),
+		"term":      strconv.FormatUint(r.Term, 10),
+	})
 }
 
 func (r *raft) becomeLeader() {
@@ -756,6 +786,15 @@ func (r *raft) becomeLeader() {
 	// usage is zero.
 	r.reduceUncommittedSize([]pb.Entry{emptyEnt})
 	r.logger.Infof("%x became leader at term %d", r.id, r.Term)
+
+	client, err := netrixclient.GetClient()
+	if err != nil {
+		return
+	}
+	client.PublishEventAsync("StateChange", map[string]string{
+		"new_state": StateLeader.String(),
+		"term":      strconv.FormatUint(r.Term, 10),
+	})
 }
 
 func (r *raft) hup(t CampaignType) {

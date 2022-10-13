@@ -100,5 +100,6 @@ func StrategyCommand() *cobra.Command {
 	cmd.AddCommand(timeoutStrat)
 	cmd.AddCommand(pctStrat)
 	cmd.AddCommand(pctTestStrat)
+	cmd.AddCommand(testStrat)
 	return cmd
 }

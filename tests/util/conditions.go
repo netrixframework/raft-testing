@@ -79,7 +79,7 @@ func IsStateLeader() sm.Condition {
 					"replica": e.Replica,
 					"state":   newState,
 					"term":    eType.Params["term"],
-				}).Info("New leader")
+				}).Debug("New leader")
 				return true
 			}
 			return false
@@ -213,5 +213,18 @@ func IsTermGte(g int) sm.Condition {
 		default:
 			return false
 		}
+	}
+}
+
+func IsLeader(replica types.ReplicaID) sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
+		if !e.IsGeneric() {
+			return false
+		}
+		ty := e.Type.(*types.GenericEventType)
+		if ty.T != "StateChange" || ty.Params["new_state"] != raft.StateLeader.String() {
+			return false
+		}
+		return e.Replica == replica
 	}
 }

@@ -288,6 +288,8 @@ func (n *node) Start() error {
 		MaxInflightMsgs:           256,
 		MaxUncommittedEntriesSize: 1 << 30,
 		Logger:                    n.setupRaftLogger(),
+		PreVote:                   true,
+		// CheckQuorum:               true,
 	}
 
 	// if restart {
@@ -325,19 +327,19 @@ func (n *node) raftloop() {
 			n.GetRN().Tick()
 			nodeState := n.GetRN().Status()
 			// n.timer.UpdateState(nodeState)
-			newState := n.state.UpdateRaftState(nodeState.RaftState)
-			if newState {
-				PublishEventToNetrix("StateChange", map[string]string{
-					"new_state": nodeState.RaftState.String(),
-					"term":      strconv.FormatUint(nodeState.Term, 10),
-				})
-				// if nodeState.RaftState == raft.StateLeader {
-				// 	var buf bytes.Buffer
-				// 	if err := gob.NewEncoder(&buf).Encode(kv{"test", "test"}); err == nil {
-				// 		n.Propose(buf.Bytes())
-				// 	}
-				// }
-			}
+			n.state.UpdateRaftState(nodeState.RaftState)
+			// if newState {
+			// 	PublishEventToNetrix("StateChange", map[string]string{
+			// 		"new_state": nodeState.RaftState.String(),
+			// 		"term":      strconv.FormatUint(nodeState.Term, 10),
+			// 	})
+			// 	// if nodeState.RaftState == raft.StateLeader {
+			// 	// 	var buf bytes.Buffer
+			// 	// 	if err := gob.NewEncoder(&buf).Encode(kv{"test", "test"}); err == nil {
+			// 	// 		n.Propose(buf.Bytes())
+			// 	// 	}
+			// 	// }
+			// }
 			if n.state.UpdateTermState(nodeState.Term) {
 				PublishEventToNetrix("TermChange", map[string]string{
 					"term": strconv.FormatUint(nodeState.Term, 10),
