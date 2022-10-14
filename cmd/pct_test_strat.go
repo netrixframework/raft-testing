@@ -173,9 +173,9 @@ func ConfChangeTest() *testlib.TestCase {
 			testlib.DropMessage(),
 		),
 	)
-	// filters.AddFilter(
-	// 	testlib.If(util.IsMessageType(raftpb.MsgApp).And(sm.IsMessageTo(types.ReplicaID("1")))).Then(testlib.DropMessage()),
-	// )
+	filters.AddFilter(
+		testlib.If(util.IsMessageType(raftpb.MsgApp).And(sm.IsMessageTo(types.ReplicaID("1")))).Then(testlib.DropMessage()),
+	)
 	filters.AddFilter(
 		testlib.If(
 			testStateMachine.InState("OneLeader").And(
@@ -233,7 +233,7 @@ var pctTestStrat = &cobra.Command{
 			MaxEvents:      1000,
 			Depth:          6,
 			RecordFilePath: "/Users/srinidhin/Local/data/testing/raft/t",
-		}, testCase)
+		}, testCase, true)
 
 		property := sm.NewStateMachine()
 		start := property.Builder()
@@ -265,7 +265,7 @@ var pctTestStrat = &cobra.Command{
 			&util.RaftMsgParser{},
 			strategy,
 			&strategies.StrategyConfig{
-				Iterations:       50,
+				Iterations:       1000,
 				IterationTimeout: 15 * time.Second,
 				SetupFunc:        r.setupFunc,
 				StepFunc:         r.stepFunc,

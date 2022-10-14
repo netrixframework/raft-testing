@@ -15,7 +15,7 @@ import (
 )
 
 var testStrat = &cobra.Command{
-	Use: "test-strat",
+	Use: "test",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		termCh := make(chan os.Signal, 1)
 		signal.Notify(termCh, os.Interrupt, syscall.SIGTERM)
@@ -49,7 +49,7 @@ var testStrat = &cobra.Command{
 			&util.RaftMsgParser{},
 			strategy,
 			&strategies.StrategyConfig{
-				Iterations:       6,
+				Iterations:       10,
 				IterationTimeout: 15 * time.Second,
 				SetupFunc:        r.setupFunc,
 				StepFunc:         r.stepFunc,
