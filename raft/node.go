@@ -288,7 +288,7 @@ func (n *node) Start() error {
 		MaxInflightMsgs:           256,
 		MaxUncommittedEntriesSize: 1 << 30,
 		Logger:                    n.setupRaftLogger(),
-		PreVote:                   true,
+		// PreVote:                   true,
 		// CheckQuorum:               true,
 	}
 

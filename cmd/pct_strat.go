@@ -16,6 +16,7 @@ import (
 	"github.com/netrixframework/netrix/strategies/pct"
 	"github.com/netrixframework/netrix/types"
 	raft "github.com/netrixframework/raft-testing/raft/protocol"
+	pctTest "github.com/netrixframework/raft-testing/tests/pct"
 	"github.com/netrixframework/raft-testing/tests/util"
 	"github.com/spf13/cobra"
 )
@@ -107,21 +108,21 @@ var pctStrat = &cobra.Command{
 
 		var strategy strategies.Strategy = pct.NewPCTStrategy(&pct.PCTStrategyConfig{
 			RandSrc:        rand.NewSource(time.Now().UnixMilli()),
-			MaxEvents:      100,
+			MaxEvents:      1000,
 			Depth:          6,
 			RecordFilePath: "/Users/srinidhin/Local/data/testing/raft/t",
 		})
 
-		property := sm.NewStateMachine()
-		start := property.Builder()
-		// start.On(IsCommit(6), sm.SuccessStateLabel)
-		start.On(
-			sm.ConditionWithAction(util.IsStateLeader(), CountTermLeader()),
-			sm.StartStateLabel,
-		)
-		start.On(MoreThanOneLeader(), sm.SuccessStateLabel)
+		// property := sm.NewStateMachine()
+		// start := property.Builder()
+		// // start.On(IsCommit(6), sm.SuccessStateLabel)
+		// start.On(
+		// 	sm.ConditionWithAction(util.IsStateLeader(), CountTermLeader()),
+		// 	sm.StartStateLabel,
+		// )
+		// start.On(MoreThanOneLeader(), sm.SuccessStateLabel)
 
-		strategy = strategies.NewStrategyWithProperty(strategy, property)
+		strategy = strategies.NewStrategyWithProperty(strategy, pctTest.SimpleReorderProperty())
 
 		driver := strategies.NewStrategyDriver(
 			&config.Config{
@@ -135,9 +136,9 @@ var pctStrat = &cobra.Command{
 			&util.RaftMsgParser{},
 			strategy,
 			&strategies.StrategyConfig{
-				Iterations:       50,
-				IterationTimeout: 10 * time.Second,
-				SetupFunc:        pctSetupFunc(r.setupFunc),
+				Iterations:       100,
+				IterationTimeout: 15 * time.Second,
+				SetupFunc:        r.setupFunc,
 				StepFunc:         r.stepFunc,
 				FinalizeFunc:     r.finalize,
 			},

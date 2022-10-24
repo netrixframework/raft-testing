@@ -89,6 +89,24 @@ func IsStateLeader() sm.Condition {
 	}
 }
 
+func IsStateFollower() sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
+		switch eType := e.Type.(type) {
+		case *types.GenericEventType:
+			if eType.T != "StateChange" {
+				return false
+			}
+			newState, ok := eType.Params["new_state"]
+			if !ok {
+				return false
+			}
+			return newState == raft.StateFollower.String()
+		default:
+			return false
+		}
+	}
+}
+
 func IsStateCandidate() sm.Condition {
 	return func(e *types.Event, c *sm.Context) bool {
 		switch eType := e.Type.(type) {

@@ -7,10 +7,9 @@ import (
 	"time"
 
 	"github.com/netrixframework/netrix/config"
-	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/strategies"
 	"github.com/netrixframework/netrix/strategies/unittest"
-	"github.com/netrixframework/netrix/types"
+	"github.com/netrixframework/raft-testing/tests/pct"
 	"github.com/netrixframework/raft-testing/tests/util"
 	"github.com/spf13/cobra"
 )
@@ -22,16 +21,16 @@ var testStrat = &cobra.Command{
 		signal.Notify(termCh, os.Interrupt, syscall.SIGTERM)
 
 		r := newRecords()
-		var strategy strategies.Strategy = unittest.NewTestCaseStrategy(LivenessBugOne())
+		var strategy strategies.Strategy = unittest.NewTestCaseStrategy(pct.SimpleReorder())
 
-		property := sm.NewStateMachine()
-		start := property.Builder()
-		start.On(
-			util.IsLeader(types.ReplicaID("4")),
-			"FourLeader",
-		).On(util.IsStateLeader(), sm.SuccessStateLabel)
+		// property := sm.NewStateMachine()
+		// start := property.Builder()
+		// start.On(
+		// 	util.IsLeader(types.ReplicaID("4")),
+		// 	"FourLeader",
+		// ).On(util.IsStateLeader(), sm.SuccessStateLabel)
 
-		strategy = strategies.NewStrategyWithProperty(strategy, property)
+		strategy = strategies.NewStrategyWithProperty(strategy, pct.SimpleReorderProperty())
 
 		driver := strategies.NewStrategyDriver(
 			&config.Config{
@@ -45,7 +44,7 @@ var testStrat = &cobra.Command{
 			&util.RaftMsgParser{},
 			strategy,
 			&strategies.StrategyConfig{
-				Iterations:       1000,
+				Iterations:       100,
 				IterationTimeout: 15 * time.Second,
 				SetupFunc:        r.setupFunc,
 				StepFunc:         r.stepFunc,
