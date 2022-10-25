@@ -18,9 +18,13 @@ import (
 func ManyReorder() *testlib.TestCase {
 	stateMachine := sm.NewStateMachine()
 	stateMachine.Builder().On(
+		util.IsStateLeader(),
+		"LeaderElected",
+	).On(
 		util.IsStateFollower().And(sm.IsEventOf(types.ReplicaID("4"))),
 		"FourFollower",
 	).MarkSuccess()
+
 	filters := testlib.NewFilterSet()
 
 	filters.AddFilter(
@@ -39,7 +43,6 @@ func ManyReorder() *testlib.TestCase {
 			testlib.DeliverMessage(),
 		),
 	)
-
 	testCase := testlib.NewTestCase("ManyReorder", 2*time.Minute, stateMachine, filters)
 	return testCase
 }
@@ -47,6 +50,9 @@ func ManyReorder() *testlib.TestCase {
 func ManyReorderProperty() *sm.StateMachine {
 	property := sm.NewStateMachine()
 	property.Builder().On(
+		util.IsStateLeader(),
+		"LeaderElected",
+	).On(
 		util.IsStateFollower().And(sm.IsEventOf(types.ReplicaID("4"))),
 		"FourFollower",
 	).On(

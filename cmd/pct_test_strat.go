@@ -28,9 +28,9 @@ var pctTestStrat = &cobra.Command{
 			MaxEvents:      100,
 			Depth:          6,
 			RecordFilePath: "/Users/srinidhin/Local/data/testing/raft/t",
-		}, pctTest.SimpleReorder(), true)
+		}, pctTest.ManyReorder(), true)
 
-		strategy = strategies.NewStrategyWithProperty(strategy, pctTest.SimpleReorderProperty())
+		strategy = strategies.NewStrategyWithProperty(strategy, pctTest.ManyReorderProperty())
 
 		driver := strategies.NewStrategyDriver(
 			&config.Config{

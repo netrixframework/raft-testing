@@ -111,3 +111,22 @@ func TrackLeader() testlib.FilterFunc {
 		}
 	}
 }
+
+func RecordTerm(as string) testlib.Action {
+	return func(e *types.Event, ctx *testlib.Context) (messages []*types.Message) {
+		switch eType := e.Type.(type) {
+		case *types.GenericEventType:
+			if eType.T == "StateChange" {
+				ctx.Vars.Set(as, eType.Params["term"])
+			}
+		case *types.MessageSendEventType:
+			message, ok := GetMessageFromEvent(e, ctx.Context)
+			if !ok {
+				return
+			}
+			ctx.Vars.Set(as, strconv.FormatUint(message.Term, 10))
+			return
+		}
+		return
+	}
+}

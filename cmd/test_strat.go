@@ -21,7 +21,7 @@ var testStrat = &cobra.Command{
 		signal.Notify(termCh, os.Interrupt, syscall.SIGTERM)
 
 		r := newRecords()
-		var strategy strategies.Strategy = unittest.NewTestCaseStrategy(pct.SimpleReorder())
+		var strategy strategies.Strategy = unittest.NewTestCaseStrategy(pct.DropVote())
 
 		// property := sm.NewStateMachine()
 		// start := property.Builder()
@@ -30,7 +30,7 @@ var testStrat = &cobra.Command{
 		// 	"FourLeader",
 		// ).On(util.IsStateLeader(), sm.SuccessStateLabel)
 
-		strategy = strategies.NewStrategyWithProperty(strategy, pct.SimpleReorderProperty())
+		strategy = strategies.NewStrategyWithProperty(strategy, pct.DropVoteProperty())
 
 		driver := strategies.NewStrategyDriver(
 			&config.Config{

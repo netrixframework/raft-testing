@@ -113,16 +113,7 @@ var pctStrat = &cobra.Command{
 			RecordFilePath: "/Users/srinidhin/Local/data/testing/raft/t",
 		})
 
-		// property := sm.NewStateMachine()
-		// start := property.Builder()
-		// // start.On(IsCommit(6), sm.SuccessStateLabel)
-		// start.On(
-		// 	sm.ConditionWithAction(util.IsStateLeader(), CountTermLeader()),
-		// 	sm.StartStateLabel,
-		// )
-		// start.On(MoreThanOneLeader(), sm.SuccessStateLabel)
-
-		strategy = strategies.NewStrategyWithProperty(strategy, pctTest.SimpleReorderProperty())
+		strategy = strategies.NewStrategyWithProperty(strategy, pctTest.DropVoteProperty())
 
 		driver := strategies.NewStrategyDriver(
 			&config.Config{
@@ -151,3 +142,12 @@ var pctStrat = &cobra.Command{
 		return driver.Start()
 	},
 }
+
+// property := sm.NewStateMachine()
+// start := property.Builder()
+// // start.On(IsCommit(6), sm.SuccessStateLabel)
+// start.On(
+// 	sm.ConditionWithAction(util.IsStateLeader(), CountTermLeader()),
+// 	sm.StartStateLabel,
+// )
+// start.On(MoreThanOneLeader(), sm.SuccessStateLabel)

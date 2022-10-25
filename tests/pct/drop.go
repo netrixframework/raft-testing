@@ -28,13 +28,17 @@ func DropVote() *testlib.TestCase {
 func DropVoteProperty() *sm.StateMachine {
 	property := sm.NewStateMachine()
 
-	property.Builder().On(
-		util.IsStateLeader(),
-		"LeaderElected",
-	).On(
+	start := property.Builder()
+
+	start.On(
 		sm.IsMessageReceive().And(util.IsMessageType(raftpb.MsgVote).And(sm.IsMessageFrom(types.ReplicaID("4")))),
-		"VoteDelivered",
-	).MarkSuccess()
+		sm.FailStateLabel,
+	)
+
+	start.On(
+		sm.IsMessageReceive().And(util.IsMessageType(raftpb.MsgHeartbeatResp).And(sm.IsMessageFrom(types.ReplicaID("4")))),
+		sm.SuccessStateLabel,
+	)
 
 	return property
 }
