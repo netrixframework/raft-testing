@@ -231,6 +231,8 @@ github.com/netrixframework/go-clientlibrary v0.1.6 h1:L7T772+o945KkEkUDJL34qabRe
 github.com/netrixframework/go-clientlibrary v0.1.6/go.mod h1:NlZaXs1NwQnkkVAfHv0WUS3ImtZLeKh+sY4GZZyPKkY=
 github.com/netrixframework/netrix v0.2.3 h1:xk4P8A9R4xZO0k1o7X1iQBnvVDZJnz6tYnN9Vkeo08I=
 github.com/netrixframework/netrix v0.2.3/go.mod h1:Qh2XROlHsSguYtxZbXp+uRahI+yIVpeTgHPgj1Vefrg=
+github.com/netrixframework/netrix v0.2.6 h1:CXFmS5Fg6DdhiwlrKp4ir/xcYVrQcJSzhltDw6KuzKM=
+github.com/netrixframework/netrix v0.2.6/go.mod h1:Qh2XROlHsSguYtxZbXp+uRahI+yIVpeTgHPgj1Vefrg=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
