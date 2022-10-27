@@ -110,10 +110,10 @@ var pctStrat = &cobra.Command{
 			RandSrc:        rand.NewSource(time.Now().UnixMilli()),
 			MaxEvents:      1000,
 			Depth:          6,
-			RecordFilePath: "/Users/srinidhin/Local/data/testing/raft/t",
+			RecordFilePath: "/home/nagendra/data/testing/raft/t",
 		})
 
-		strategy = strategies.NewStrategyWithProperty(strategy, pctTest.DropVoteProperty())
+		strategy = strategies.NewStrategyWithProperty(strategy, pctTest.MultiReorderProperty())
 
 		driver := strategies.NewStrategyDriver(
 			&config.Config{
@@ -121,13 +121,13 @@ var pctStrat = &cobra.Command{
 				NumReplicas:   5,
 				LogConfig: config.LogConfig{
 					Format: "json",
-					Path:   "/Users/srinidhin/Local/data/testing/raft/t/checker.log",
+					Path:   "/home/nagendra/data/testing/raft/t/checker.log",
 				},
 			},
 			&util.RaftMsgParser{},
 			strategy,
 			&strategies.StrategyConfig{
-				Iterations:       100,
+				Iterations:       1000,
 				IterationTimeout: 15 * time.Second,
 				SetupFunc:        r.setupFunc,
 				StepFunc:         r.stepFunc,
