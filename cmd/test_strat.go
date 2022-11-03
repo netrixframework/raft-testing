@@ -21,7 +21,7 @@ var testStrat = &cobra.Command{
 		signal.Notify(termCh, os.Interrupt, syscall.SIGTERM)
 
 		r := newRecords()
-		var strategy strategies.Strategy = unittest.NewTestCaseStrategy(pct.MultiDrop(), "/home/nagendra/data/testing/raft/t")
+		var strategy strategies.Strategy = unittest.NewTestCaseStrategy(pct.MultiDrop(), "/Users/srinidhin/Local/data/testing/raft/t")
 
 		// property := sm.NewStateMachine()
 		// start := property.Builder()
@@ -38,7 +38,7 @@ var testStrat = &cobra.Command{
 				NumReplicas:   5,
 				LogConfig: config.LogConfig{
 					Format: "json",
-					Path:   "/home/nagendra/data/testing/raft/t/checker.log",
+					Path:   "/Users/srinidhin/Local/data/testing/raft/t/checker.log",
 				},
 			},
 			&util.RaftMsgParser{},
