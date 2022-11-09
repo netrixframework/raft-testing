@@ -21,7 +21,7 @@ var testStrat = &cobra.Command{
 		signal.Notify(termCh, os.Interrupt, syscall.SIGTERM)
 
 		r := newRecords()
-		var strategy strategies.Strategy = unittest.NewTestCaseStrategy(ConfChangeTest())
+		var strategy strategies.Strategy = unittest.NewTestCaseStrategy(ConfChangeTest(), "/Users/srinidhin/Local/data/testing/raft/t")
 
 		property := sm.NewStateMachine()
 		start := property.Builder()

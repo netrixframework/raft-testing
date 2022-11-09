@@ -70,6 +70,8 @@ github.com/netrixframework/netrix v0.2.2 h1:q/U6hAT/ZzQT465xebdcLYA4apHN/NBbU0uh
 github.com/netrixframework/netrix v0.2.2/go.mod h1:Qh2XROlHsSguYtxZbXp+uRahI+yIVpeTgHPgj1Vefrg=
 github.com/netrixframework/netrix v0.2.3 h1:xk4P8A9R4xZO0k1o7X1iQBnvVDZJnz6tYnN9Vkeo08I=
 github.com/netrixframework/netrix v0.2.3/go.mod h1:Qh2XROlHsSguYtxZbXp+uRahI+yIVpeTgHPgj1Vefrg=
+github.com/netrixframework/netrix v0.2.9 h1:zvohWcbRhxQDU7Kj3dlzwe0ovrDHipJwpQoIzmrFU9Y=
+github.com/netrixframework/netrix v0.2.9/go.mod h1:Qh2XROlHsSguYtxZbXp+uRahI+yIVpeTgHPgj1Vefrg=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=

@@ -7,7 +7,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.2
 	github.com/netrixframework/go-clientlibrary v0.1.6
-	github.com/netrixframework/netrix v0.2.3
+	github.com/netrixframework/netrix v0.2.9
 	github.com/spf13/cobra v1.4.0
 	go.etcd.io/etcd/client/pkg/v3 v3.5.2
 	go.uber.org/zap v1.17.0

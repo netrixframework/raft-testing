@@ -206,13 +206,13 @@ func ConfChangeTest() *testlib.TestCase {
 			testlib.OnceAction("DeleteNode3", DeleteNode(types.ReplicaID("3"), types.ReplicaID("2"))),
 		),
 	)
-	// filters.AddFilter(
-	// 	testlib.If(
-	// 		testStateMachine.InState("Removed3").Not().And(
-	// 			util.IsMessageType(raftpb.MsgApp).And(sm.IsMessageTo(types.ReplicaID("3"))),
-	// 		),
-	// 	).Then(testlib.DropMessage()),
-	// )
+	filters.AddFilter(
+		testlib.If(
+			testStateMachine.InState("Removed3").Not().And(
+				util.IsMessageType(raftpb.MsgApp).And(sm.IsMessageTo(types.ReplicaID("3"))),
+			),
+		).Then(testlib.DropMessage()),
+	)
 
 	testCase := testlib.NewTestCase("ConfigChange", 10*time.Minute, testStateMachine, filters)
 	return testCase
@@ -232,8 +232,8 @@ var pctTestStrat = &cobra.Command{
 			RandSrc:        rand.NewSource(time.Now().UnixMilli()),
 			MaxEvents:      1000,
 			Depth:          6,
-			RecordFilePath: "/Users/srinidhin/Local/data/testing/raft/t",
-		}, testCase, true)
+			RecordFilePath: "/home/nagendra/data/testing/raft/t",
+		}, testCase)
 
 		property := sm.NewStateMachine()
 		start := property.Builder()
@@ -259,13 +259,13 @@ var pctTestStrat = &cobra.Command{
 				NumReplicas:   4,
 				LogConfig: config.LogConfig{
 					Format: "json",
-					Path:   "/Users/srinidhin/Local/data/testing/raft/t/checker.log",
+					Path:   "/home/nagendra/data/testing/raft/t/checker.log",
 				},
 			},
 			&util.RaftMsgParser{},
 			strategy,
 			&strategies.StrategyConfig{
-				Iterations:       1000,
+				Iterations:       100,
 				IterationTimeout: 15 * time.Second,
 				SetupFunc:        r.setupFunc,
 				StepFunc:         r.stepFunc,
