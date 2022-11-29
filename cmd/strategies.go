@@ -101,5 +101,6 @@ func StrategyCommand() *cobra.Command {
 	cmd.AddCommand(pctStrat)
 	cmd.AddCommand(pctTestStrat)
 	cmd.AddCommand(testStrat)
+	cmd.AddCommand(rlStratCmd)
 	return cmd
 }
