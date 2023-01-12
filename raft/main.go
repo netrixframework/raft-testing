@@ -55,7 +55,7 @@ func main() {
 	node, err := newNode(&nodeConfig{
 		ID:         config.ID,
 		Peers:      strings.Split(config.Peers, ","),
-		TickTime:   50 * time.Millisecond,
+		TickTime:   100 * time.Millisecond,
 		StorageDir: fmt.Sprintf("build/storage/raftexample-%d", config.ID),
 		KVApp:      kvApp,
 		LogPath:    fmt.Sprintf("build/logs/raftexample-%d", config.ID),
