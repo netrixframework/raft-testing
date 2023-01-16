@@ -2,9 +2,8 @@ package cmd
 
 import (
 	"bufio"
+	"crypto/sha256"
 	"encoding/json"
-	"hash"
-	"hash/crc32"
 	"os"
 	"sync"
 
@@ -18,7 +17,6 @@ type raftInterpreter struct {
 	uniqueStates map[string]string
 	recordPath   string
 	lock         *sync.Mutex
-	hash         hash.Hash
 }
 
 func newRaftInterpreter(filePath string) *raftInterpreter {
@@ -27,19 +25,21 @@ func newRaftInterpreter(filePath string) *raftInterpreter {
 		uniqueStates: make(map[string]string),
 		recordPath:   filePath,
 		lock:         new(sync.Mutex),
-		hash:         crc32.New(crc32.MakeTable(crc32.IEEE)),
 	}
 }
 
 var _ rl.Interpreter = &raftInterpreter{}
 
 func (r *raftInterpreter) CurState() rl.State {
+	states := make(map[string]string)
 	r.lock.Lock()
-	defer r.lock.Unlock()
+	for k, v := range r.states {
+		states[k] = v
+	}
+	r.lock.Unlock()
 
 	return &raftState{
-		states: r.states,
-		hash:   r.hash,
+		states: states,
 	}
 }
 
@@ -55,7 +55,7 @@ func (r *raftInterpreter) Update(e *types.Event, ctx *strategies.Context) {
 	defer r.lock.Unlock()
 	r.states[string(e.Replica)] = eType.Params["state"]
 
-	s := &raftState{states: r.states, hash: r.hash}
+	s := &raftState{states: r.states}
 	stateKey := s.Hash()
 	if _, ok := r.uniqueStates[stateKey]; !ok {
 		r.uniqueStates[stateKey] = s.String()
@@ -94,7 +94,6 @@ func (r *raftInterpreter) RecordCoverage() error {
 
 type raftState struct {
 	states map[string]string
-	hash   hash.Hash
 }
 
 func (s *raftState) Hash() string {
@@ -102,7 +101,8 @@ func (s *raftState) Hash() string {
 	if err != nil {
 		return ""
 	}
-	return string(s.hash.Sum(b))
+	hash := sha256.Sum256(b)
+	return string(hash[:])
 }
 
 func (s *raftState) String() string {

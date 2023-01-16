@@ -79,11 +79,15 @@ var rlStratCmd = &cobra.Command{
 		}
 
 		interpreter := newRaftInterpreter("/Users/srinidhin/Local/data/testing/raft/t/states.jsonl")
-		strategy := rl.NewRLStrategy(&rl.RLStrategyConfig{
+		strategy, err := rl.NewRLStrategy(&rl.RLStrategyConfig{
 			Interpreter:       interpreter,
 			AgentTickDuration: 20 * time.Millisecond,
 			Policy:            policy,
+			MetricsPath:       "/Users/srinidhin/Local/data/testing/raft/t",
 		})
+		if err != nil {
+			return err
+		}
 
 		driver := strategies.NewStrategyDriver(
 			&config.Config{
@@ -99,7 +103,12 @@ var rlStratCmd = &cobra.Command{
 			&strategies.StrategyConfig{
 				Iterations:       10,
 				IterationTimeout: 15 * time.Second,
-				SetupFunc:        rlSetup(),
+				SetupFunc: func(ctx *strategies.Context) {
+					ctx.Logger.With(log.LogParams{
+						"unique_states": interpreter.CoveredStates(),
+					}).Info("Covered States")
+					rlSetup()(ctx)
+				},
 				FinalizeFunc: func(ctx *strategies.Context) {
 					ctx.Logger.With(log.LogParams{
 						"unique_states": interpreter.CoveredStates(),

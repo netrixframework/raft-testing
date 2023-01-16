@@ -90,12 +90,11 @@ func (t *netrixTransport) sendMessage(msg raftpb.Message) {
 	if err != nil {
 		return
 	}
-	id := fmt.Sprintf("%s_%d_%s_%d_%d", t.ID, msg.To, msg.Type.String(), msg.Term, msg.Index)
-	t.netrixClient.SendMessageWithID(
-		id,
+	t.netrixClient.SendMessage(
 		msg.Type.String(),
 		ntypes.ReplicaID(strconv.FormatUint(msg.To, 10)),
 		b,
+		true,
 	)
 }
 

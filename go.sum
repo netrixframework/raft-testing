@@ -237,6 +237,8 @@ github.com/netrixframework/netrix v0.3.0 h1:w2IGA5JzpD/7Ar1Nx2aJ390xl8LQ/fbkIYM8
 github.com/netrixframework/netrix v0.3.0/go.mod h1:Qh2XROlHsSguYtxZbXp+uRahI+yIVpeTgHPgj1Vefrg=
 github.com/netrixframework/netrix v0.3.1 h1:B2RcVd+/+KRt+z7v2qxe3JApzKBkrvyAO9z8DlU4BIM=
 github.com/netrixframework/netrix v0.3.1/go.mod h1:Qh2XROlHsSguYtxZbXp+uRahI+yIVpeTgHPgj1Vefrg=
+github.com/netrixframework/netrix v0.3.2 h1:dn2TjP5FDTRUj2Y9PDw90yAQzOxQUye0x9hA+40g/uI=
+github.com/netrixframework/netrix v0.3.2/go.mod h1:Qh2XROlHsSguYtxZbXp+uRahI+yIVpeTgHPgj1Vefrg=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
