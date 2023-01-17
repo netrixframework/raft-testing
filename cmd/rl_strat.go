@@ -60,6 +60,8 @@ func getPolicy(name string) (rl.Policy, error) {
 		})
 	case "softmax":
 		return rl.NewNegativeRewardPolicy(0.3, 0.7), nil
+	case "random":
+		return rl.NewRandomPolicy(), nil
 	default:
 		return nil, errors.New("invalid policy name")
 	}
@@ -78,12 +80,12 @@ var rlStratCmd = &cobra.Command{
 			return err
 		}
 
-		interpreter := newRaftInterpreter("/Users/srinidhin/Local/data/testing/raft/t/states.jsonl")
+		interpreter := newRaftInterpreter("/local/snagendra/data/testing/raft/t/states.jsonl")
 		strategy, err := rl.NewRLStrategy(&rl.RLStrategyConfig{
 			Interpreter:       interpreter,
 			AgentTickDuration: 20 * time.Millisecond,
 			Policy:            policy,
-			MetricsPath:       "/Users/srinidhin/Local/data/testing/raft/t",
+			MetricsPath:       "/local/snagendra/data/testing/raft/t",
 		})
 		if err != nil {
 			return err
@@ -95,13 +97,13 @@ var rlStratCmd = &cobra.Command{
 				NumReplicas:   5,
 				LogConfig: config.LogConfig{
 					Format: "json",
-					Path:   "/Users/srinidhin/Local/data/testing/raft/t/checker.log",
+					Path:   "/local/snagendra/data/testing/raft/t/checker.log",
 				},
 			},
 			&util.RaftMsgParser{},
 			strategy,
 			&strategies.StrategyConfig{
-				Iterations:       10,
+				Iterations:       1000,
 				IterationTimeout: 15 * time.Second,
 				SetupFunc: func(ctx *strategies.Context) {
 					ctx.Logger.With(log.LogParams{

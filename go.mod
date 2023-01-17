@@ -7,7 +7,7 @@ require go.etcd.io/etcd/raft/v3 v3.5.1
 require (
 	github.com/cockroachdb/datadriven v0.0.0-20200714090401-bf6692d28da5
 	github.com/netrixframework/go-clientlibrary v0.1.7
-	github.com/netrixframework/netrix v0.3.2
+	github.com/netrixframework/netrix v0.3.3
 	github.com/spf13/cobra v1.4.0
 	go.etcd.io/etcd/client/pkg/v3 v3.5.2
 	go.etcd.io/etcd/server/v3 v3.5.1
@@ -22,7 +22,6 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/cockroachdb/errors v1.2.4 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f // indirect
-	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/getsentry/raven-go v0.2.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.7.7 // indirect
@@ -51,7 +50,7 @@ require (
 	go.etcd.io/etcd/pkg/v3 v3.5.2 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
 	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
