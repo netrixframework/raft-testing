@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"sync"
@@ -102,7 +103,7 @@ func (s *raftState) Hash() string {
 		return ""
 	}
 	hash := sha256.Sum256(b)
-	return string(hash[:])
+	return hex.EncodeToString(hash[:])
 }
 
 func (s *raftState) String() string {
