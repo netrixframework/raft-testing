@@ -7,7 +7,7 @@ require go.etcd.io/etcd/raft/v3 v3.5.1
 require (
 	github.com/cockroachdb/datadriven v0.0.0-20200714090401-bf6692d28da5
 	github.com/netrixframework/go-clientlibrary v0.1.7
-	github.com/netrixframework/netrix v0.3.3
+	github.com/netrixframework/netrix v0.3.5
 	github.com/spf13/cobra v1.4.0
 	go.etcd.io/etcd/client/pkg/v3 v3.5.2
 	go.etcd.io/etcd/server/v3 v3.5.1

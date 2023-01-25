@@ -37,26 +37,26 @@ func getPolicy(name string) (rl.Policy, error) {
 	switch name {
 	case "ucbzero":
 		return rl.NewUCBZeroPolicy(&rl.UCBZeroPolicyConfig{
-			Horizon:     1000,
-			StateSpace:  10000,
-			Iterations:  10,
-			ActionSpace: 1000,
+			Horizon:     200,
+			StateSpace:  1000000,
+			Iterations:  1000,
+			ActionSpace: 10000,
 
 			Probability: 0.2,
-			C:           1,
+			C:           0.0001,
 		}), nil
 	case "ucbzerogreedy":
 		return rl.NewUCBZeroEGreedyPolicy(&rl.UCBZeroEGreedyPolicyConfig{
 			UCBZeroPolicyConfig: &rl.UCBZeroPolicyConfig{
-				Horizon:     1000,
-				StateSpace:  10000,
-				Iterations:  10,
-				ActionSpace: 1000,
+				Horizon:     200,
+				StateSpace:  1000000,
+				Iterations:  10000,
+				ActionSpace: 10000,
 
 				Probability: 0.2,
-				C:           1,
+				C:           0.0001,
 			},
-			Epsilon: 0.1,
+			Epsilon: 0.3,
 		})
 	case "softmax":
 		return rl.NewNegativeRewardPolicy(0.3, 0.7), nil
@@ -69,7 +69,7 @@ func getPolicy(name string) (rl.Policy, error) {
 
 var rlStratCmd = &cobra.Command{
 	Use:   "rl [policy]",
-	Short: "rl [policy] - policy can be one of ucbzero,ucbzerogreedy or softmax",
+	Short: "rl [policy] - policy can be one of ucbzero,ucbzerogreedy,softmax or random",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		termCh := make(chan os.Signal, 1)
@@ -103,8 +103,8 @@ var rlStratCmd = &cobra.Command{
 			&util.RaftMsgParser{},
 			strategy,
 			&strategies.StrategyConfig{
-				Iterations:       1000,
-				IterationTimeout: 15 * time.Second,
+				Iterations:       10000,
+				IterationTimeout: 4 * time.Second,
 				SetupFunc: func(ctx *strategies.Context) {
 					ctx.Logger.With(log.LogParams{
 						"unique_states": interpreter.CoveredStates(),
