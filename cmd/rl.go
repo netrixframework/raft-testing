@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/netrixframework/netrix/log"
 	"github.com/netrixframework/netrix/strategies"
 	"github.com/netrixframework/netrix/strategies/rl"
 	"github.com/netrixframework/netrix/types"
@@ -52,6 +53,10 @@ func (r *raftInterpreter) Update(e *types.Event, ctx *strategies.Context) {
 	if eType.T != "State" {
 		return
 	}
+	ctx.Logger.With(log.LogParams{
+		"State":   eType.Params["state"],
+		"Replica": e.Replica,
+	}).Debug("Updating state")
 	r.lock.Lock()
 	defer r.lock.Unlock()
 	r.states[string(e.Replica)] = eType.Params["state"]

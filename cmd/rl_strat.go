@@ -38,12 +38,12 @@ func getPolicy(name string) (rl.Policy, error) {
 	case "ucbzero":
 		return rl.NewUCBZeroPolicy(&rl.UCBZeroPolicyConfig{
 			Horizon:     200,
-			StateSpace:  1000000,
+			StateSpace:  1e7,
 			Iterations:  1000,
-			ActionSpace: 10000,
+			ActionSpace: 1e6,
 
 			Probability: 0.2,
-			C:           0.0001,
+			C:           1e-5,
 		}), nil
 	case "ucbzerogreedy":
 		return rl.NewUCBZeroEGreedyPolicy(&rl.UCBZeroEGreedyPolicyConfig{
@@ -86,6 +86,7 @@ var rlStratCmd = &cobra.Command{
 			AgentTickDuration: 20 * time.Millisecond,
 			Policy:            policy,
 			MetricsPath:       "/local/snagendra/data/testing/raft/t",
+			AllowTimeouts:     false,
 		})
 		if err != nil {
 			return err
@@ -103,7 +104,7 @@ var rlStratCmd = &cobra.Command{
 			&util.RaftMsgParser{},
 			strategy,
 			&strategies.StrategyConfig{
-				Iterations:       10000,
+				Iterations:       1000,
 				IterationTimeout: 4 * time.Second,
 				SetupFunc: func(ctx *strategies.Context) {
 					ctx.Logger.With(log.LogParams{

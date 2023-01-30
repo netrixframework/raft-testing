@@ -1,5 +1,5 @@
-raftexample1: go test -coverprofile=./build/one_cover.out -coverpkg="github.com/netrixframework/raft-testing/raft/protocol/" -run="^TestRun$" -args -conf build/config/one.json 
-raftexample2: go test -coverprofile=./build/two_cover.out -coverpkg="github.com/netrixframework/raft-testing/raft/protocol/" -run="^TestRun$" -args -conf build/config/two.json 
-raftexample3: go test -coverprofile=./build/three_cover.out -coverpkg="github.com/netrixframework/raft-testing/raft/protocol/" -run="^TestRun$" -args -conf build/config/three.json 
-raftexample4: go test -coverprofile=./build/four_cover.out -coverpkg="github.com/netrixframework/raft-testing/raft/protocol/" -run="^TestRun$" -args -conf build/config/four.json 
-raftexample5: go test -coverprofile=./build/five_cover.out -coverpkg="github.com/netrixframework/raft-testing/raft/protocol/" -run="^TestRun$" -args -conf build/config/five.json 
+raftexample1: go test -timeout 0 -coverprofile=/local/snagendra/data/testing/raft/t/coverage/one_cover.out -coverpkg="github.com/netrixframework/raft-testing/raft/protocol/..." -run="^TestRun$" -args -conf build/config/one.json 
+raftexample2: go test -timeout 0 -coverprofile=/local/snagendra/data/testing/raft/t/coverage/two_cover.out -coverpkg="github.com/netrixframework/raft-testing/raft/protocol/..." -run="^TestRun$" -args -conf build/config/two.json 
+raftexample3: go test -timeout 0 -coverprofile=/local/snagendra/data/testing/raft/t/coverage/three_cover.out -coverpkg="github.com/netrixframework/raft-testing/raft/protocol/..." -run="^TestRun$" -args -conf build/config/three.json 
+raftexample4: go test -timeout 0 -coverprofile=/local/snagendra/data/testing/raft/t/coverage/four_cover.out -coverpkg="github.com/netrixframework/raft-testing/raft/protocol/..." -run="^TestRun$" -args -conf build/config/four.json 
+raftexample5: go test -timeout 0 -coverprofile=/local/snagendra/data/testing/raft/t/coverage/five_cover.out -coverpkg="github.com/netrixframework/raft-testing/raft/protocol/..." -run="^TestRun$" -args -conf build/config/five.json 

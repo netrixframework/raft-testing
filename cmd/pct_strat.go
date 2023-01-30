@@ -11,12 +11,12 @@ import (
 	"time"
 
 	"github.com/netrixframework/netrix/config"
+	"github.com/netrixframework/netrix/log"
 	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/strategies"
 	"github.com/netrixframework/netrix/strategies/pct"
 	"github.com/netrixframework/netrix/types"
 	raft "github.com/netrixframework/raft-testing/raft/protocol"
-	pctTest "github.com/netrixframework/raft-testing/tests/pct"
 	"github.com/netrixframework/raft-testing/tests/util"
 	"github.com/spf13/cobra"
 )
@@ -104,16 +104,18 @@ var pctStrat = &cobra.Command{
 		termCh := make(chan os.Signal, 1)
 		signal.Notify(termCh, os.Interrupt, syscall.SIGTERM)
 
-		r := newRecords()
+		// r := newRecords()
+
+		rInt := newRaftInterpreter("/local/snagendra/data/testing/raft/t/states.jsonl")
 
 		var strategy strategies.Strategy = pct.NewPCTStrategy(&pct.PCTStrategyConfig{
 			RandSrc:        rand.NewSource(time.Now().UnixMilli()),
 			MaxEvents:      1000,
 			Depth:          6,
-			RecordFilePath: "/home/nagendra/data/testing/raft/t",
+			RecordFilePath: "/local/snagendra/data/testing/raft/t",
 		})
 
-		strategy = strategies.NewStrategyWithProperty(strategy, pctTest.MultiReorderProperty())
+		// strategy = strategies.NewStrategyWithProperty(strategy, pctTest.MultiReorderProperty())
 
 		driver := strategies.NewStrategyDriver(
 			&config.Config{
@@ -121,17 +123,26 @@ var pctStrat = &cobra.Command{
 				NumReplicas:   5,
 				LogConfig: config.LogConfig{
 					Format: "json",
-					Path:   "/home/nagendra/data/testing/raft/t/checker.log",
+					Path:   "/local/snagendra/data/testing/raft/t/checker.log",
 				},
 			},
 			&util.RaftMsgParser{},
 			strategy,
 			&strategies.StrategyConfig{
 				Iterations:       1000,
-				IterationTimeout: 15 * time.Second,
-				SetupFunc:        r.setupFunc,
-				StepFunc:         r.stepFunc,
-				FinalizeFunc:     r.finalize,
+				IterationTimeout: 4 * time.Second,
+				SetupFunc: func(ctx *strategies.Context) {
+					rInt.Reset()
+				},
+				StepFunc: func(e *types.Event, ctx *strategies.Context) {
+					rInt.Update(e, ctx)
+				},
+				FinalizeFunc: func(ctx *strategies.Context) {
+					ctx.Logger.With(log.LogParams{
+						"unique_states": rInt.CoveredStates(),
+					}).Info("Covered states")
+					rInt.RecordCoverage()
+				},
 			},
 		)
 
