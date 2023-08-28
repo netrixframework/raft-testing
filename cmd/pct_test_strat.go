@@ -27,7 +27,7 @@ var pctTestStrat = &cobra.Command{
 			RandSrc:        rand.NewSource(time.Now().UnixMilli()),
 			MaxEvents:      100,
 			Depth:          6,
-			RecordFilePath: "../Local/data/testing/raft/t",
+			RecordFilePath: "results",
 		}, pctTest.ManyReorder())
 
 		strategy = strategies.NewStrategyWithProperty(strategy, pctTest.ManyReorderProperty())
@@ -38,7 +38,7 @@ var pctTestStrat = &cobra.Command{
 				NumReplicas:   5,
 				LogConfig: config.LogConfig{
 					Format: "json",
-					Path:   "../Local/data/testing/raft/t/checker.log",
+					Path:   "results/checker.log",
 				},
 			},
 			&util.RaftMsgParser{},
