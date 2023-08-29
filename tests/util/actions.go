@@ -162,3 +162,28 @@ func RecordIndex(label string) testlib.Action {
 		return
 	}
 }
+
+func CountTermLeader() sm.Action {
+	return func(e *types.Event, ctx *sm.Context) {
+		switch eType := e.Type.(type) {
+		case *types.GenericEventType:
+			if eType.T != "StateChange" {
+				return
+			}
+			newState, ok := eType.Params["new_state"]
+			if !ok {
+				return
+			}
+			if newState == raft.StateLeader.String() {
+				key := "leaders"
+				if ctx.Vars.Exists(key) {
+					cur, _ := ctx.Vars.GetInt(key)
+					ctx.Vars.Set(key, cur+1)
+				} else {
+					ctx.Vars.Set(key, 1)
+				}
+			}
+		default:
+		}
+	}
+}

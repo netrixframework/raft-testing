@@ -257,3 +257,26 @@ func IsSameIndex(label string) sm.Condition {
 		return ok && int(msg.Index) == index
 	}
 }
+
+func IsCommit(index int) sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
+		if !e.IsGeneric() {
+			return false
+		}
+		ty := e.Type.(*types.GenericEventType)
+		if ty.T != "Commit" {
+			return false
+		}
+		if ty.Params["index"] != strconv.Itoa(index) {
+			return false
+		}
+		return true
+	}
+}
+
+func MoreThanOneLeader() sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
+		leaders, ok := c.Vars.GetInt("leaders")
+		return ok && leaders > 1
+	}
+}

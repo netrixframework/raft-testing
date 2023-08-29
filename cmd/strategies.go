@@ -5,10 +5,12 @@ import (
 	"time"
 
 	"github.com/netrixframework/netrix/log"
+	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/strategies"
+	"github.com/netrixframework/netrix/testlib"
 	"github.com/netrixframework/netrix/types"
+	"github.com/netrixframework/raft-testing/tests"
 	"github.com/netrixframework/raft-testing/tests/util"
-	"github.com/spf13/cobra"
 	"go.etcd.io/etcd/raft/v3"
 	"go.etcd.io/etcd/raft/v3/raftpb"
 )
@@ -89,18 +91,34 @@ func (r *records) finalize(ctx *strategies.Context) {
 			"completed_runs":    iterations,
 			"average_time":      avg.String(),
 			"elections_per_run": count / iterations,
-		}).Info("Metrics")
+		}).Debug("Metrics")
 	}
 }
 
-var iterations int
-
-func StrategyCommand() *cobra.Command {
-	cmd := &cobra.Command{
-		Use: "strat",
+func GetTest(test string) (*testlib.TestCase, *sm.StateMachine) {
+	switch test {
+	case "Liveness":
+		return tests.LivenessTest(), tests.LivenessProperty()
+	case "LivenessNoCQ":
+		return tests.LivenessNoCQTest(), tests.LivenessNoCQProperty()
+	case "NoLiveness":
+		return tests.NoLivenessTest(), tests.NoLivenessProperty()
+	case "ConfChangeBug":
+		return tests.ConfChangeBugTest(), tests.ConfChangeBugProperty()
+	case "DropHeartbeat":
+		return tests.DropHeartbeatTest(), tests.DropHeartbeatProperty()
+	case "DropVotes":
+		return tests.DropVotesTest(), tests.DropVotesProperty()
+	case "DropFVotes":
+		return tests.DropFVotesTest(), tests.DropFVotesProperty()
+	case "DropAppend":
+		return tests.DropAppendTest(), tests.DropAppendProperty()
+	case "ReVote":
+		return tests.ReVoteTest(), tests.ReVoteProperty()
+	case "ManyReVote":
+		return tests.ManyReVoteTest(), tests.ManyReVoteProperty()
+	case "MultiReVote":
+		return tests.MultiReVoteTest(), tests.MultiReVoteProperty()
 	}
-	cmd.PersistentFlags().IntVarP(&iterations, "iterations", "i", 1000, "number of strategy iterations to run")
-	cmd.AddCommand(pctStrat)
-	cmd.AddCommand(pctTestStrat)
-	return cmd
+	return nil, nil
 }

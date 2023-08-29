@@ -1,21 +1,18 @@
 package cmd
 
 import (
+	"errors"
 	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/netrixframework/netrix/config"
-	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/strategies"
 	"github.com/netrixframework/netrix/strategies/pct"
-	"github.com/netrixframework/netrix/types"
-	raft "github.com/netrixframework/raft-testing/raft/protocol"
 	"github.com/netrixframework/raft-testing/tests/util"
 	"github.com/spf13/cobra"
 )
@@ -48,98 +45,59 @@ func pctSetupFunc(recordSetupFunc func(*strategies.Context)) func(*strategies.Co
 		}
 	}
 }
+func PCTStrategyCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:  "pct [test]",
+		Long: "Run PCT without any guidance and check if the property is satisfied for a specific test",
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			termCh := make(chan os.Signal, 1)
+			signal.Notify(termCh, os.Interrupt, syscall.SIGTERM)
 
-func IsCommit(index int) sm.Condition {
-	return func(e *types.Event, c *sm.Context) bool {
-		if !e.IsGeneric() {
-			return false
-		}
-		ty := e.Type.(*types.GenericEventType)
-		if ty.T != "Commit" {
-			return false
-		}
-		if ty.Params["index"] != strconv.Itoa(index) {
-			return false
-		}
-		return true
-	}
-}
-
-func CountTermLeader() sm.Action {
-	return func(e *types.Event, ctx *sm.Context) {
-		switch eType := e.Type.(type) {
-		case *types.GenericEventType:
-			if eType.T != "StateChange" {
-				return
+			_, property := GetTest(args[0])
+			if property == nil {
+				return errors.New("invalid test")
 			}
-			newState, ok := eType.Params["new_state"]
-			if !ok {
-				return
-			}
-			if newState == raft.StateLeader.String() {
-				key := "leaders"
-				if ctx.Vars.Exists(key) {
-					cur, _ := ctx.Vars.GetInt(key)
-					ctx.Vars.Set(key, cur+1)
-				} else {
-					ctx.Vars.Set(key, 1)
-				}
-			}
-		default:
-		}
-	}
-}
 
-func MoreThanOneLeader() sm.Condition {
-	return func(e *types.Event, c *sm.Context) bool {
-		leaders, ok := c.Vars.GetInt("leaders")
-		return ok && leaders > 1
-	}
-}
+			r := newRecords()
 
-var pctStrat = &cobra.Command{
-	Use: "pct",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		termCh := make(chan os.Signal, 1)
-		signal.Notify(termCh, os.Interrupt, syscall.SIGTERM)
+			var strategy strategies.Strategy = pct.NewPCTStrategy(&pct.PCTStrategyConfig{
+				RandSrc:        rand.NewSource(time.Now().UnixMilli()),
+				MaxEvents:      1000,
+				Depth:          6,
+				RecordFilePath: "results",
+			})
 
-		r := newRecords()
+			strategy = strategies.NewStrategyWithProperty(strategy, property)
 
-		var strategy strategies.Strategy = pct.NewPCTStrategy(&pct.PCTStrategyConfig{
-			RandSrc:        rand.NewSource(time.Now().UnixMilli()),
-			MaxEvents:      1000,
-			Depth:          6,
-			RecordFilePath: "/local/snagendra/data/testing/raft/t",
-		})
-
-		// strategy = strategies.NewStrategyWithProperty(strategy, pctTest.MultiReorderProperty())
-
-		driver := strategies.NewStrategyDriver(
-			&config.Config{
-				APIServerAddr: "127.0.0.1:7074",
-				NumReplicas:   5,
-				LogConfig: config.LogConfig{
-					Format: "json",
-					Path:   "/local/snagendra/data/testing/raft/t/checker.log",
+			driver := strategies.NewStrategyDriver(
+				&config.Config{
+					APIServerAddr: "127.0.0.1:7074",
+					NumReplicas:   5,
+					LogConfig: config.LogConfig{
+						Format: "json",
+						Path:   "results/checker.log",
+					},
 				},
-			},
-			&util.RaftMsgParser{},
-			strategy,
-			&strategies.StrategyConfig{
-				Iterations:       iterations,
-				IterationTimeout: 4 * time.Second,
-				SetupFunc:        r.setupFunc,
-				StepFunc:         r.stepFunc,
-				FinalizeFunc:     r.finalize,
-			},
-		)
+				&util.RaftMsgParser{},
+				strategy,
+				&strategies.StrategyConfig{
+					Iterations:       iterations,
+					IterationTimeout: 4 * time.Second,
+					SetupFunc:        r.setupFunc,
+					StepFunc:         r.stepFunc,
+					FinalizeFunc:     r.finalize,
+				},
+			)
 
-		go func() {
-			<-termCh
-			driver.Stop()
-		}()
-		return driver.Start()
-	},
+			go func() {
+				<-termCh
+				driver.Stop()
+			}()
+			return driver.Start()
+		},
+	}
+	return cmd
 }
 
 // property := sm.NewStateMachine()

@@ -4,7 +4,7 @@ go 1.17
 
 require go.etcd.io/etcd/raft/v3 v3.5.1
 
-replace github.com/netrixframework/netrix v0.3.5 => /home/snagendra/go/src/github.com/netrixframework/netrix
+replace github.com/netrixframework/netrix v0.3.5 => /Users/srinidhin/Local/go/src/github.com/netrixframework/netrix
 
 require (
 	github.com/cockroachdb/datadriven v0.0.0-20200714090401-bf6692d28da5

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -10,54 +11,63 @@ import (
 	"github.com/netrixframework/netrix/config"
 	"github.com/netrixframework/netrix/strategies"
 	"github.com/netrixframework/netrix/strategies/pct"
-	pctTest "github.com/netrixframework/raft-testing/tests/pct"
 	"github.com/netrixframework/raft-testing/tests/util"
 	"github.com/spf13/cobra"
 )
 
-var pctTestStrat = &cobra.Command{
-	Use: "pct-test",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		termCh := make(chan os.Signal, 1)
-		signal.Notify(termCh, os.Interrupt, syscall.SIGTERM)
+func PCTTestStrategyCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:  "pct-test [test]",
+		Long: "Run PCT with a test case to guide the exploration and measure outcomes",
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			termCh := make(chan os.Signal, 1)
+			signal.Notify(termCh, os.Interrupt, syscall.SIGTERM)
 
-		r := newRecords()
+			testCase, property := GetTest(args[0])
+			if testCase == nil || property == nil {
+				return errors.New("invalid test")
+			}
 
-		var strategy strategies.Strategy = pct.NewPCTStrategyWithTestCase(&pct.PCTStrategyConfig{
-			RandSrc:        rand.NewSource(time.Now().UnixMilli()),
-			MaxEvents:      100,
-			Depth:          6,
-			RecordFilePath: "results",
-		}, pctTest.ManyReorder())
+			r := newRecords()
 
-		strategy = strategies.NewStrategyWithProperty(strategy, pctTest.ManyReorderProperty())
+			var strategy strategies.Strategy = pct.NewPCTStrategyWithTestCase(&pct.PCTStrategyConfig{
+				RandSrc:        rand.NewSource(time.Now().UnixMilli()),
+				MaxEvents:      100,
+				Depth:          6,
+				RecordFilePath: "results",
+			}, testCase)
 
-		driver := strategies.NewStrategyDriver(
-			&config.Config{
-				APIServerAddr: "127.0.0.1:7074",
-				NumReplicas:   5,
-				LogConfig: config.LogConfig{
-					Format: "json",
-					Path:   "results/checker.log",
+			strategy = strategies.NewStrategyWithProperty(strategy, property)
+
+			driver := strategies.NewStrategyDriver(
+				&config.Config{
+					APIServerAddr: "127.0.0.1:7074",
+					NumReplicas:   5,
+					LogConfig: config.LogConfig{
+						Format: "json",
+						Path:   "results/checker.log",
+					},
 				},
-			},
-			&util.RaftMsgParser{},
-			strategy,
-			&strategies.StrategyConfig{
-				Iterations:       iterations,
-				IterationTimeout: 15 * time.Second,
-				SetupFunc:        r.setupFunc,
-				StepFunc:         r.stepFunc,
-				FinalizeFunc:     r.finalize,
-			},
-		)
+				&util.RaftMsgParser{},
+				strategy,
+				&strategies.StrategyConfig{
+					Iterations:       iterations,
+					IterationTimeout: 15 * time.Second,
+					SetupFunc:        r.setupFunc,
+					StepFunc:         r.stepFunc,
+					FinalizeFunc:     r.finalize,
+				},
+			)
 
-		go func() {
-			<-termCh
-			driver.Stop()
-		}()
-		return driver.Start()
-	},
+			go func() {
+				<-termCh
+				driver.Stop()
+			}()
+			return driver.Start()
+		},
+	}
+	return cmd
 }
 
 // filters := testlib.NewFilterSet()
