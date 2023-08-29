@@ -93,14 +93,14 @@ func (r *records) finalize(ctx *strategies.Context) {
 	}
 }
 
+var iterations int
+
 func StrategyCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "strat",
 	}
-	cmd.AddCommand(timeoutStrat)
+	cmd.PersistentFlags().IntVarP(&iterations, "iterations", "i", 1000, "number of strategy iterations to run")
 	cmd.AddCommand(pctStrat)
 	cmd.AddCommand(pctTestStrat)
-	cmd.AddCommand(testStrat)
-	cmd.AddCommand(rlStratCmd)
 	return cmd
 }

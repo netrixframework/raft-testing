@@ -246,3 +246,14 @@ func IsLeader(replica types.ReplicaID) sm.Condition {
 		return e.Replica == replica
 	}
 }
+
+func IsSameIndex(label string) sm.Condition {
+	return func(e *types.Event, c *sm.Context) bool {
+		msg, ok := GetMessageFromEvent(e, c)
+		if !ok {
+			return false
+		}
+		index, ok := c.Vars.GetInt(label)
+		return ok && int(msg.Index) == index
+	}
+}

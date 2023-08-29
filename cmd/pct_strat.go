@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/netrixframework/netrix/config"
-	"github.com/netrixframework/netrix/log"
 	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/strategies"
 	"github.com/netrixframework/netrix/strategies/pct"
@@ -104,9 +103,7 @@ var pctStrat = &cobra.Command{
 		termCh := make(chan os.Signal, 1)
 		signal.Notify(termCh, os.Interrupt, syscall.SIGTERM)
 
-		// r := newRecords()
-
-		rInt := newRaftInterpreter("/local/snagendra/data/testing/raft/t/states.jsonl")
+		r := newRecords()
 
 		var strategy strategies.Strategy = pct.NewPCTStrategy(&pct.PCTStrategyConfig{
 			RandSrc:        rand.NewSource(time.Now().UnixMilli()),
@@ -129,20 +126,11 @@ var pctStrat = &cobra.Command{
 			&util.RaftMsgParser{},
 			strategy,
 			&strategies.StrategyConfig{
-				Iterations:       1000,
+				Iterations:       iterations,
 				IterationTimeout: 4 * time.Second,
-				SetupFunc: func(ctx *strategies.Context) {
-					rInt.Reset()
-				},
-				StepFunc: func(e *types.Event, ctx *strategies.Context) {
-					rInt.Update(e, ctx)
-				},
-				FinalizeFunc: func(ctx *strategies.Context) {
-					ctx.Logger.With(log.LogParams{
-						"unique_states": rInt.CoveredStates(),
-					}).Info("Covered states")
-					rInt.RecordCoverage()
-				},
+				SetupFunc:        r.setupFunc,
+				StepFunc:         r.stepFunc,
+				FinalizeFunc:     r.finalize,
 			},
 		)
 

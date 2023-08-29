@@ -1,4 +1,4 @@
-package pct
+package tests
 
 import (
 	"time"
@@ -10,7 +10,7 @@ import (
 	"go.etcd.io/etcd/raft/v3/raftpb"
 )
 
-func DropVote() *testlib.TestCase {
+func DropVotesTest() *testlib.TestCase {
 	stateMachine := sm.NewStateMachine()
 
 	filters := testlib.NewFilterSet()
@@ -25,7 +25,7 @@ func DropVote() *testlib.TestCase {
 	return testCase
 }
 
-func DropVoteProperty() *sm.StateMachine {
+func DropVotesProperty() *sm.StateMachine {
 	property := sm.NewStateMachine()
 
 	start := property.Builder()

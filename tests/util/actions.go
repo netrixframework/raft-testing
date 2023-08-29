@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/netrixframework/netrix/log"
+	"github.com/netrixframework/netrix/sm"
 	"github.com/netrixframework/netrix/testlib"
 	"github.com/netrixframework/netrix/types"
 	"go.etcd.io/etcd/raft/v3"
@@ -127,6 +128,37 @@ func RecordTerm(as string) testlib.Action {
 			ctx.Vars.Set(as, strconv.FormatUint(message.Term, 10))
 			return
 		}
+		return
+	}
+}
+
+func CountLeaderChanges() sm.Action {
+	return func(e *types.Event, ctx *sm.Context) {
+		if !e.IsGeneric() {
+			return
+		}
+		ty := e.Type.(*types.GenericEventType)
+		if ty.T != "StateChange" || ty.Params["new_state"] != raft.StateLeader.String() {
+			return
+		}
+		if curLeader, ok := ctx.Vars.GetString("leader"); ok && curLeader != string(e.Replica) {
+			ctx.Vars.Set("leader", string(e.Replica))
+			if !ctx.Vars.Exists("leaderCount") {
+				ctx.Vars.SetCounter("leaderCount")
+			}
+			counter, _ := ctx.Vars.GetCounter("leaderCount")
+			counter.Incr()
+		}
+	}
+}
+
+func RecordIndex(label string) testlib.Action {
+	return func(e *types.Event, ctx *testlib.Context) (msgs []*types.Message) {
+		msg, ok := GetMessageFromEvent(e, ctx.Context)
+		if !ok {
+			return
+		}
+		ctx.Vars.Set(label, int(msg.Index))
 		return
 	}
 }

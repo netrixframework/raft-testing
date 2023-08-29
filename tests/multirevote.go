@@ -1,14 +1,30 @@
-package pct
+package tests
 
 import (
+	"time"
+
 	"github.com/netrixframework/netrix/sm"
+	"github.com/netrixframework/netrix/testlib"
 	"github.com/netrixframework/netrix/types"
 	"github.com/netrixframework/raft-testing/tests/util"
 	"go.etcd.io/etcd/raft/v3/raftpb"
 )
 
-// Expecting the vote response and append entries response to arrive later than the heartbeat
-func MultiReorderProperty() *sm.StateMachine {
+func MultiReVoteTest() *testlib.TestCase {
+	stateMachine := sm.NewStateMachine()
+	filters := testlib.NewFilterSet()
+
+	filters.AddFilter(
+		testlib.If(
+			sm.IsMessageSend().And(util.IsMessageType(raftpb.MsgAppResp).And(sm.IsMessageFrom(types.ReplicaID("4")))),
+		).Then(testlib.DropMessage()),
+	)
+
+	testCase := testlib.NewTestCase("MultiDrop", 2*time.Minute, stateMachine, filters)
+	return testCase
+}
+
+func MultiReVoteProperty() *sm.StateMachine {
 	property := sm.NewStateMachine()
 
 	start := property.Builder()

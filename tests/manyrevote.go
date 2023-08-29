@@ -1,4 +1,4 @@
-package pct
+package tests
 
 import (
 	"time"
@@ -10,12 +10,7 @@ import (
 	"go.etcd.io/etcd/raft/v3/raftpb"
 )
 
-// ManyReorder returns a test where the votes from 4 are delayed until 4 becomes a follower
-// In effect, the vote is delayed until all other votes, append entries are delivered
-
-// This will fail when 4 is the leader
-
-func ManyReorder() *testlib.TestCase {
+func ManyReVoteTest() *testlib.TestCase {
 	stateMachine := sm.NewStateMachine()
 	stateMachine.Builder().On(
 		util.IsStateLeader(),
@@ -47,7 +42,7 @@ func ManyReorder() *testlib.TestCase {
 	return testCase
 }
 
-func ManyReorderProperty() *sm.StateMachine {
+func ManyReVoteProperty() *sm.StateMachine {
 	property := sm.NewStateMachine()
 	property.Builder().On(
 		util.IsStateLeader(),
@@ -55,9 +50,11 @@ func ManyReorderProperty() *sm.StateMachine {
 	).On(
 		util.IsStateFollower().And(sm.IsEventOf(types.ReplicaID("4"))),
 		"FourFollower",
-	).On(
-		sm.IsMessageReceive().And(util.IsMessageType(raftpb.MsgVoteResp).And(sm.IsMessageFrom(types.ReplicaID("4")))),
-		"VoteReceived",
 	).MarkSuccess()
+
+	// .On(
+	// 	sm.IsMessageReceive().And(util.IsMessageType(raftpb.MsgVoteResp).And(sm.IsMessageFrom(types.ReplicaID("4")))),
+	// 	"VoteReceived",
+	// )
 	return property
 }

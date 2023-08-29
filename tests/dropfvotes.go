@@ -1,4 +1,4 @@
-package voting
+package tests
 
 import (
 	"fmt"
@@ -11,8 +11,6 @@ import (
 	"go.etcd.io/etcd/raft/v3/raftpb"
 )
 
-// Test if the leader is elected despite dropping $f$ vote response messages
-
 func votesByTermByReplica(e *types.Event, c *sm.Context) (string, bool) {
 	m, ok := util.GetMessageFromEvent(e, c)
 	if !ok {
@@ -21,7 +19,7 @@ func votesByTermByReplica(e *types.Event, c *sm.Context) (string, bool) {
 	return fmt.Sprintf("_votesDropped_%d_%d", m.Term, m.To), false
 }
 
-func DropVotes() *testlib.TestCase {
+func DropFVotesTest() *testlib.TestCase {
 	stateMachine := sm.NewStateMachine()
 	init := stateMachine.Builder()
 	init.On(
@@ -49,4 +47,15 @@ func DropVotes() *testlib.TestCase {
 		filters,
 	)
 	return testcase
+}
+
+func DropFVotesProperty() *sm.StateMachine {
+	stateMachine := sm.NewStateMachine()
+	init := stateMachine.Builder()
+	init.On(
+		util.IsStateChange().
+			And(util.IsStateLeader()),
+		sm.SuccessStateLabel,
+	)
+	return stateMachine
 }

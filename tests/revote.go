@@ -1,4 +1,4 @@
-package pct
+package tests
 
 import (
 	"time"
@@ -10,12 +10,7 @@ import (
 	"go.etcd.io/etcd/raft/v3/raftpb"
 )
 
-// SimpleReorder returns a unit test where votes from process 4 are delayed until a leader is elected.
-// This is to ensure that 4's vote is delivered last to the candidate
-
-// This test will fail if 4 is the candidate that wins an election
-
-func SimpleReorder() *testlib.TestCase {
+func ReVoteTest() *testlib.TestCase {
 	stateMachine := sm.NewStateMachine()
 	stateMachine.Builder().On(
 		util.IsStateLeader(),
@@ -45,7 +40,7 @@ func SimpleReorder() *testlib.TestCase {
 	return testCase
 }
 
-func SimpleReorderProperty() *sm.StateMachine {
+func ReVoteProperty() *sm.StateMachine {
 	property := sm.NewStateMachine()
 	property.Builder().On(
 		util.IsStateLeader(),

@@ -1,4 +1,4 @@
-package voting
+package tests
 
 import (
 	"time"
@@ -9,10 +9,7 @@ import (
 	"go.etcd.io/etcd/raft/v3/raftpb"
 )
 
-// Drop heartbeat messages and Append entries messages
-// to a particular replica and expect it to transition to candidate state
-
-func DropHeartbeat() *testlib.TestCase {
+func DropHeartbeatTest() *testlib.TestCase {
 	stateMachine := sm.NewStateMachine()
 	init := stateMachine.Builder()
 	init.On(
@@ -63,4 +60,20 @@ func DropHeartbeat() *testlib.TestCase {
 	)
 	testcase.SetupFunc(util.PickRandomReplica())
 	return testcase
+}
+
+func DropHeartbeatProperty() *sm.StateMachine {
+	property := sm.NewStateMachine()
+	init := property.Builder()
+	init.On(
+		util.IsStateChange().
+			And(util.IsStateLeader()),
+		"LeaderElected",
+	).On(
+		sm.IsEventOfF(util.RandomReplica()).
+			And(util.IsStateChange()).
+			And(util.IsStateCandidate()),
+		sm.SuccessStateLabel,
+	)
+	return property
 }
